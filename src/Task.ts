@@ -371,7 +371,7 @@ export class Task<T> extends Promise<T> {
 	 * A convenience property for getting and setting this Task's
 	 * priority.
 	 */
-	get priority() {
+	get priority(): TaskPriority {
 		return this.controller.signal.priority;
 	}
 	set priority(priority: TaskPriority) {
@@ -391,7 +391,9 @@ export class Task<T> extends Promise<T> {
 			resolve: (value: T | PromiseLike<T>) => void,
 			reject: (reason?: any) => void,
 		) => void,
-		controller = new TaskController(Task.defaultControllerOptions),
+		controller: TaskController = new TaskController(
+			Task.defaultControllerOptions,
+		),
 	) {
 		const executorProxy = new Proxy(executor, {
 			apply(
