@@ -1,0 +1,28 @@
+{
+	"name": "@apt/task",
+	"version": "0.1.0",
+	"tasks": {
+		"test:watch": "deno test --watch"
+	},
+	"imports": {
+		"@std/assert": "jsr:@std/assert@1"
+	},
+	"compilerOptions": {
+		"lib": [
+			"dom",
+			"dom.iterable",
+			"dom.asynciterable",
+			"deno.ns"
+		]
+	},
+	"fmt": {
+		"useTabs": true
+	},
+	"lint": {
+		"rules": {
+			"exclude": [
+				"no-explicit-any"
+			]
+		}
+	}
+}
