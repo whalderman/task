@@ -14,17 +14,57 @@ await importPolyfillIfNecessary();
  *
  * A Task will **always** be slower than the equivalent Promise.
  * Tasks are meant to improve time to user interactivity, *not*
- * execution time. Tasks will default to the lowest priority possible
- * available in the Scheduler API. The default priority for all Task
- * objects can be set with `Task.defaultControllerOptions`:
+ * execution time. Tasks will default to the lowest priority available
+ * in the Scheduler API.
  *
+ * @example
+ * ```js
+ * let taskController = null;
+ * document.querySelector("input").addEventListener(
+ *   "input",
+ *   (ev) => {
+ *     const query = ev.target?.value;
+ *     if (!query || query.length < 2) {
+ *       return;
+ *     }
+ *
+ *     // abort any active request
+ *     taskController?.abort();
+ *
+ *     // Create a new TaskController
+ *     taskController = new TaskController();
+ *
+ *     // Wrap a new fetch request
+ *     const task = Task.wrapWithController(
+ *       taskController,
+ *       fetch(`https://somehost/api/search?q=${query}`, taskController)
+ *         .then((response) => response.json())
+ *         .then((data) => {
+ *           // Use the data
+ *           console.log(data);
+ *         })
+ *         .catch((e) => {
+ *           // Check if the error is due to an abort
+ *           if (e.name === "AbortError") {
+ *             console.log("Fetch request was aborted.");
+ *           } else {
+ *             console.error("Fetch error:", e);
+ *           }
+ *         }),
+ *     );
+ *   },
+ * );
+ * ```
+ *
+ * The default priority for all Task objects can
+ * be set with `Task.defaultControllerOptions`:
+ *
+ * @example
  * ```js
  * // lowest priority, the default for Task objects
  * Task.defaultControllerOptions = "background";
- *
  * // middle priority, the default for the Scheduler API
  * Task.defaultControllerOptions = "user-visible";
- *
  * // highest priority
  * Task.defaultControllerOptions = "user-blocking";
  * ```
@@ -33,15 +73,18 @@ await importPolyfillIfNecessary();
  * `catch`) can also be updated at any point using the `controller`
  * property of an active Task.
  *
+ * @example
  * ```js
  * const task = Task.wrap(import("some-module.js"));
  *
- * console.log(task.priority); // "background"
+ * console.log(task.controller.signal.priority); // "background"
+ * // console.log(task.priority); // "background"
  *
- * task.setPriority("user-blocking");
- * // or task.controller.setPriority("user-blocking");
+ * task.controller.setPriority("user-blocking");
+ * // task.setPriority("user-blocking");
  *
- * console.log(task.priority); // "user-blocking"
+ * console.log(task.controller.signal.priority); // "user-blocking"
+ * // console.log(task.priority); // "user-blocking"
  * ```
  */
 export class Task<T> extends Promise<T> {
@@ -368,12 +411,14 @@ export class Task<T> extends Promise<T> {
 	controller: TaskController;
 
 	/**
-	 * A convenience property for getting and setting this Task's
-	 * priority.
+	 * A convenience property for getting this Task's priority.
 	 */
 	get priority(): TaskPriority {
 		return this.controller.signal.priority;
 	}
+	/**
+	 * A convenience property for setting the priority of this Task.
+	 */
 	set priority(priority: TaskPriority) {
 		this.controller.setPriority(priority);
 	}
