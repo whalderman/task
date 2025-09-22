@@ -21,6 +21,9 @@
 	"fmt": {
 		"useTabs": true
 	},
+	"test": {
+		"include": ["src/**/*.test.ts"]
+	},
 	"lint": {
 		"rules": {
 			"exclude": [
