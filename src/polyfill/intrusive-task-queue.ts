@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2020 Google LLC, 2025 Warren Halderman
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ class DoublyLinkedTaskQueue {
 	 */
 	constructor() {}
 
-	/** @param task */
 	push(task: SchedulerTask) {
 		if (typeof task !== "object") throw new TypeError("Task must be an object");
 
@@ -68,7 +67,7 @@ class DoublyLinkedTaskQueue {
 	takeNextTask(): SchedulerTask | null {
 		if (!this.headTask) return null;
 		const task = this.headTask;
-		this.remove_(task);
+		this.remove(task);
 		return task;
 	}
 
@@ -100,7 +99,7 @@ class DoublyLinkedTaskQueue {
 			iterator = iterator.next;
 
 			if (selector(taskToMove)) {
-				sourceQueue.remove_(taskToMove);
+				sourceQueue.remove(taskToMove);
 				// Fast-forward until we're just past the insertion point. The new task
 				// is inserted between previousTask and currentTask.
 				while (
@@ -110,7 +109,7 @@ class DoublyLinkedTaskQueue {
 					previousTask = currentTask;
 					currentTask = currentTask.next;
 				}
-				this.insert_(taskToMove, previousTask);
+				this.insert(taskToMove, previousTask);
 				previousTask = taskToMove;
 			}
 		}
@@ -118,12 +117,11 @@ class DoublyLinkedTaskQueue {
 
 	/**
 	 * Insert `task` into this queue directly after `parentTask`.
-	 * @private
-	 * @param {!Object} task The task to insert.
-	 * @param {?Object} parentTask The task preceding `task` in this queue, or
+	 * @param task The task to insert.
+	 * @param parentTask The task preceding `task` in this queue, or
 	 *    null if `task` should be inserted at the beginning.
 	 */
-	insert_(task: SchedulerTask, parentTask: SchedulerTask | null) {
+	private insert(task: SchedulerTask, parentTask: SchedulerTask | null) {
 		// We can simply push the new task if it belongs at the end.
 		if (parentTask == this.tailTask) {
 			this.push(task);
@@ -147,11 +145,7 @@ class DoublyLinkedTaskQueue {
 		}
 	}
 
-	/**
-	 * @private
-	 */
-	remove_(task: SchedulerTask) {
-		if (task == null) throw new Error("Expected task to be non-null");
+	private remove(task: SchedulerTask) {
 		if (task === this.headTask) this.headTask = task.next;
 		if (task === this.tailTask) this.tailTask = this.tailTask.prev;
 		if (task.next) task.next.prev = task.prev;

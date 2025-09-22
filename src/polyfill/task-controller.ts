@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2020 Google LLC, 2025 Warren Halderman
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,33 +22,33 @@ import { TaskPriorityTypes } from "./scheduler-priorities.ts";
  * via a TaskController object.
  */
 class TaskSignal extends AbortSignal {
-	priority_: TaskPriority = "user-visible";
+	private _priority: TaskPriority = "user-visible";
 
 	/**
 	 * The priority of the task, "user-visible" by default.
 	 */
 	get priority(): TaskPriority {
-		return this.priority_;
+		return this._priority;
 	}
 
-	onprioritychange_: null | ((...args: any[]) => any) = null;
+	private _onprioritychange: null | ((...args: any[]) => void) = null;
 
 	/**
 	 * The callback to be called when the priority of the task changes.
 	 */
-	set onprioritychange(callback: (...args: any[]) => any) {
-		if (this.onprioritychange_) {
-			this.removeEventListener("prioritychange", this.onprioritychange_);
+	set onprioritychange(callback: (...args: any[]) => void) {
+		if (this._onprioritychange) {
+			this.removeEventListener("prioritychange", this._onprioritychange);
 		}
 		this.addEventListener("prioritychange", callback);
-		this.onprioritychange_ = callback;
+		this._onprioritychange = callback;
 	}
 
 	/**
 	 * The callback to be called when the priority of the signal changes.
 	 */
-	get onprioritychange(): typeof this.onprioritychange_ {
-		return this.onprioritychange_;
+	get onprioritychange(): null | ((...args: any[]) => void) {
+		return this._onprioritychange;
 	}
 }
 
@@ -78,8 +78,9 @@ class TaskPriorityChangeEvent extends Event {
  * TaskSignal.
  */
 class TaskController extends AbortController {
-	isPriorityChanging_: boolean;
+	private isPriorityChanging_ = false;
 	override signal: TaskSignal;
+
 	/**
 	 * @param {{priority: TaskPriority}} init
 	 */
@@ -98,15 +99,14 @@ class TaskController extends AbortController {
 			throw new TypeError(`Invalid task priority: '${priority}'`);
 		}
 
-		/**
-		 * @private
-		 * @type {boolean}
-		 */
-		this.isPriorityChanging_ = false;
-
 		// Morph the AbortSignal instance into a TaskSignal instance.
 		this.signal = Object.setPrototypeOf(super.signal, TaskSignal.prototype);
-		this.signal.priority_ = priority;
+		Object.defineProperty(this.signal, "_priority", {
+			configurable: false,
+			enumerable: false,
+			writable: true,
+			value: "user-visible",
+		});
 	}
 
 	/**
@@ -121,8 +121,13 @@ class TaskController extends AbortController {
 
 		this.isPriorityChanging_ = true;
 
-		const previousPriority = this.signal.priority_;
-		this.signal.priority_ = priority;
+		const previousPriority = this.signal.priority;
+		Object.defineProperty(this.signal, "_priority", {
+			configurable: false,
+			enumerable: false,
+			writable: true,
+			value: "user-visible",
+		});
 
 		const e = new TaskPriorityChangeEvent("prioritychange", {
 			previousPriority,

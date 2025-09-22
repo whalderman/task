@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2023 Google LLC, 2025 Warren Halderman
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
  * schedule continuations at 'user-blocking' priority.
  */
 
+const noop = () => {};
 /**
  * Returns a promise that is resolved in a new task. This schedules
  * continuations as 'user-blocking' scheduler.postTask() tasks.
@@ -29,7 +30,7 @@ function schedulerYield(): Promise<any> {
 	// Use 'user-blocking' priority to get similar scheduling behavior as
 	// scheduler.yield(). Note: we can't reliably inherit priority and abort since
 	// we lose context if async functions are spread across multiple tasks.
-	return self.scheduler.postTask(() => {}, { priority: "user-blocking" });
+	return self.scheduler.postTask(noop, { priority: "user-blocking" });
 }
 
 export { schedulerYield };
