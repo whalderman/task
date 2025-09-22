@@ -2,6 +2,26 @@
 
 Promises with prioritized background callbacks.
 
+## Install
+
+```sh
+deno add jsr:@apt/task
+
+pnpm i jsr:@apt/task
+# pnpm dlx jsr add @apt/task
+
+yarn add jsr:@apt/task
+# yarn dlx jsr add @apt/task
+
+vlt install jsr:@apt/task
+
+npx jsr add @apt/task
+
+bunx jsr add @apt/task
+```
+
+## What
+
 A Task is a Promise. It includes additional utility methods and a TaskController
 for more fine-grained control over its execution. This class relies on your
 JavaScript runtime having implemented the
@@ -21,10 +41,15 @@ import Task from "@apt/task";
 import Task from "@apt/task/polyfill";
 ```
 
+## Why
+
+Tasks are meant to improve time to user interactivity, _not_ execution time.
+Tasks will default to the lowest priority available in the Scheduler API.
+
 > [!NOTE]
-> A Task will **always** be slower than the equivalent Promise. Tasks are meant
-> to improve time to user interactivity, _not_ execution time. Tasks will
-> default to the lowest priority available in the Scheduler API.
+> A Task will **always** be slower than the equivalent Promise.
+
+## How
 
 ```js
 let taskController = null;
