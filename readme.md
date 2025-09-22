@@ -7,6 +7,20 @@ for more fine-grained control over its execution. This class relies on your
 JavaScript runtime having implemented the
 [Prioritized Task Scheduling API](https://developer.mozilla.org/docs/Web/API/Prioritized_Task_Scheduling_API).
 
+> [!IMPORTANT]
+> Runtimes without the Prioritized Task Scheduling API will need to import a
+> polyfill. A modified version of a polyfill from the Google Chrome team is
+> included in this package. Supported browsers and runtimes can be reviewed with
+> the link above.
+
+```js
+// import without polyfill
+import Task from "@apt/task";
+
+// import with polyfill;
+import Task from "@apt/task/polyfill";
+```
+
 > [!NOTE]
 > A Task will **always** be slower than the equivalent Promise. Tasks are meant
 > to improve time to user interactivity, _not_ execution time. Tasks will
