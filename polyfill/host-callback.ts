@@ -19,25 +19,25 @@ import {
 	TaskPriorityTypes,
 } from "./scheduler-priorities.ts";
 
+let messageIdSequence = 0;
+function nextMessageId() {
+	return messageIdSequence++;
+}
+
 /**
  * This class manages scheduling and running callbacks using postMessage.
  * @private
  */
 class PostMessageCallbackManager {
-	private channel: MessageChannel;
-	private sendPort: MessagePort;
-	private messages: Record<number, () => void>;
-	private nextMessageId: number;
+	private channel: MessageChannel = new MessageChannel();
+	private sendPort: MessagePort = this.channel.port2;
+	private callbackByMessageId: Record<number, () => void> = {};
 
 	/**
 	 * Construct a PostMessageCallbackMananger, which handles scheduling
 	 * and running callbacks via a MessageChannel.
 	 */
 	constructor() {
-		this.channel = new MessageChannel();
-		this.sendPort = this.channel.port2;
-		this.messages = {};
-		this.nextMessageId = 1;
 		this.channel.port1.onmessage = (e) => this.onMessageReceived(e);
 	}
 
@@ -49,17 +49,17 @@ class PostMessageCallbackManager {
 		// We support multiple pending postMessage callbacks by associating a handle
 		// with each message, which is used to look up the callback when the message
 		// is received.
-		const seqId = this.nextMessageId++;
-		this.messages[seqId] = callback;
-		this.sendPort.postMessage(seqId);
-		return seqId;
+		const msgId = nextMessageId();
+		this.callbackByMessageId[msgId] = callback;
+		this.sendPort.postMessage(msgId);
+		return msgId;
 	}
 
 	/**
-	 * @param {number} seqId The seqId returned when the callback was queued.
+	 * @param {number} messageId The message ID returned when the callback was queued.
 	 */
-	cancelCallback(seqId: number) {
-		delete this.messages[seqId];
+	cancelCallback(messageId: number) {
+		delete this.callbackByMessageId[messageId];
 	}
 
 	/**
@@ -67,11 +67,11 @@ class PostMessageCallbackManager {
 	 * @param ev
 	 */
 	private onMessageReceived(ev: MessageEvent) {
-		const seqId = ev.data;
-		const callback = this.messages[seqId];
+		const msgId = ev.data;
+		const callback = this.callbackByMessageId[msgId];
 		// The handle will have been removed if the callback was canceled.
 		if (!callback) return;
-		delete this.messages[seqId];
+		delete this.callbackByMessageId[msgId];
 		callback();
 	}
 }
@@ -98,7 +98,7 @@ const enum CallbackType {
 class HostCallback {
 	callback: () => void;
 	callbackType: CallbackType = CallbackType.POST_MESSAGE;
-	handle: null | number = null;
+	handle: any = null;
 	canceled = false;
 	/**
 	 * @param callback
@@ -143,7 +143,7 @@ class HostCallback {
 
 		switch (this.callbackType) {
 			case CallbackType.REQUEST_IDLE_CALLBACK:
-				this.handle && self.cancelIdleCallback(this.handle);
+				this.handle && cancelIdleCallback(this.handle);
 				break;
 			case CallbackType.SET_TIMEOUT:
 				this.handle && clearTimeout(this.handle);
@@ -171,7 +171,7 @@ class HostCallback {
 		// MessageChannel is available, we use postMessage below.
 		if (delay && delay > 0) {
 			this.callbackType = CallbackType.SET_TIMEOUT;
-			this.handle = self.setTimeout(() => {
+			this.handle = setTimeout(() => {
 				this.runCallback();
 			}, delay);
 			return;
@@ -209,7 +209,7 @@ class HostCallback {
 		// Some JS environments may not support MessageChannel.
 		// This makes setTimeout the only option.
 		this.callbackType = CallbackType.SET_TIMEOUT;
-		this.handle = self.setTimeout(() => {
+		this.handle = setTimeout(() => {
 			this.runCallback();
 		});
 	}
