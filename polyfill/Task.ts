@@ -21,22 +21,23 @@ import * as SchedulerYieldPolyfill from "./yield.ts";
 if (typeof scheduler === "undefined") {
 	console.log("Polyfilling globalThis.scheduler ...");
 	// @ts-expect-error TypeScript does not include these global types yet.
-	scheduler = new SchedulerPolyfill.Scheduler();
+	globalThis.scheduler = new SchedulerPolyfill.Scheduler();
 	console.log("Polyfilling globalThis.TaskController ...");
 	// @ts-expect-error TypeScript does not include these global types yet.
-	TaskController = TaskControllerPolyfill.TaskController;
+	globalThis.TaskController = TaskControllerPolyfill.TaskController;
 	console.log("Polyfilling globalThis.TaskSignal ...");
 	// @ts-expect-error TypeScript does not include these global types yet.
-	TaskSignal = TaskControllerPolyfill.TaskSignal;
+	globalThis.TaskSignal = TaskControllerPolyfill.TaskSignal;
 	console.log("Polyfilling globalThis.TaskPriorityChangeEvent ...");
 	// @ts-expect-error TypeScript does not include these global types yet.
-	TaskPriorityChangeEvent = TaskControllerPolyfill.TaskPriorityChangeEvent;
+	globalThis.TaskPriorityChangeEvent =
+		TaskControllerPolyfill.TaskPriorityChangeEvent;
 	console.log("Polyfill complete.");
 	// @ts-expect-error TypeScript does not include these global types yet.
 } else if (!scheduler.yield) {
 	console.log("Polyfilling globalThis.scheduler.yield ...");
 	// @ts-expect-error TypeScript does not include these global types yet.
-	scheduler.yield = SchedulerYieldPolyfill.schedulerYield;
+	globalThis.scheduler.yield = SchedulerYieldPolyfill.schedulerYield;
 	console.log("Polyfill complete.");
 }
 

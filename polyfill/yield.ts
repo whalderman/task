@@ -16,7 +16,7 @@
 
 /**
  * @fileoverview This version of scheduler.yield() is only used if
- * self.scheduler is defined. It assumes that this is the native implementation
+ * globalThis.scheduler is defined. It assumes that this is the native implementation
  * (i.e. running in an older browser), and it uses scheduler.postTask() to
  * schedule continuations at 'user-blocking' priority.
  */
@@ -31,7 +31,7 @@ function schedulerYield(): Promise<any> {
 	// scheduler.yield(). Note: we can't reliably inherit priority and abort since
 	// we lose context if async functions are spread across multiple tasks.
 	// @ts-expect-error TypeScript does not include these global types yet.
-	return self.scheduler.postTask(noop, { priority: "user-blocking" });
+	return globalThis.scheduler.postTask(noop, { priority: "user-blocking" });
 }
 
 export { schedulerYield };
