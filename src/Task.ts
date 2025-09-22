@@ -1,6 +1,3 @@
-import { importPolyfillIfNecessary } from "./polyfill/polyfill.ts";
-await importPolyfillIfNecessary();
-
 /**
  * @typeParam T: The type of the value that the Task will resolve to.
  *

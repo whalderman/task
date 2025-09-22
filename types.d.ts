@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { TaskPriorityTypes } from "./scheduler-priorities.ts";
+import type { TaskPriorityTypes } from "./polyfill/scheduler-priorities.ts";
 
 declare global {
 	/**

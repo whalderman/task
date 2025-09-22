@@ -21,7 +21,7 @@ import { TaskPriorityTypes } from "./scheduler-priorities.ts";
  * communicate with a prioritized task, and abort it or change the priority
  * via a TaskController object.
  */
-class TaskSignal extends AbortSignal {
+export class TaskSignal extends AbortSignal {
 	private _priority: TaskPriority = "user-visible";
 
 	/**
@@ -56,7 +56,7 @@ class TaskSignal extends AbortSignal {
  * Event type used for priority change events:
  * https://wicg.github.io/scheduling-apis/#sec-task-priority-change-event.
  */
-class TaskPriorityChangeEvent extends Event {
+export class TaskPriorityChangeEvent extends Event {
 	previousPriority: TaskPriority;
 
 	/**
@@ -77,7 +77,7 @@ class TaskPriorityChangeEvent extends Event {
  * TaskController enables changing the priority of tasks associated with its
  * TaskSignal.
  */
-class TaskController extends AbortController {
+export class TaskController extends AbortController {
 	private isPriorityChanging_ = false;
 	override signal: TaskSignal;
 
@@ -135,5 +135,3 @@ class TaskController extends AbortController {
 		this.isPriorityChanging_ = false;
 	}
 }
-
-export { TaskController, TaskPriorityChangeEvent, TaskSignal };

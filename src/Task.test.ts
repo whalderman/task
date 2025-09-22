@@ -1,6 +1,5 @@
 import { assertInstanceOf, assertStrictEquals } from "@std/assert";
-import Task from "./Task.ts";
-import "./polyfill/types.d.ts";
+import Task from "../polyfill/Task.ts";
 
 Deno.test("Task is instanceof Promise", async () => {
 	const task = new Task<1>((resolve) => {
