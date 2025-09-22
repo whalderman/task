@@ -92,9 +92,7 @@ class TaskController extends AbortController {
 			throw new TypeError(`'init' is not an object`);
 		}
 
-		const priority = init.priority === undefined
-			? "user-visible"
-			: init.priority;
+		const priority = !init.priority ? "user-visible" : init.priority;
 		if (!TaskPriorityTypes.includes(priority)) {
 			throw new TypeError(`Invalid task priority: '${priority}'`);
 		}
@@ -105,7 +103,7 @@ class TaskController extends AbortController {
 			configurable: false,
 			enumerable: false,
 			writable: true,
-			value: "user-visible",
+			value: priority,
 		});
 	}
 
@@ -126,7 +124,7 @@ class TaskController extends AbortController {
 			configurable: false,
 			enumerable: false,
 			writable: true,
-			value: "user-visible",
+			value: priority,
 		});
 
 		const e = new TaskPriorityChangeEvent("prioritychange", {
