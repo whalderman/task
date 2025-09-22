@@ -1,5 +1,3 @@
-//# allFunctionsCalledOnLoad
-
 import { importPolyfillIfNecessary } from "./polyfill/polyfill.ts";
 await importPolyfillIfNecessary();
 
@@ -568,15 +566,3 @@ export interface TaskWithResolvers<T> extends PromiseWithResolvers<T> {
 	resolve: (value: T | PromiseLike<T>) => void;
 	reject: (reason?: any) => void;
 }
-
-interface TaskFulfilledResult<T> {
-	status: "fulfilled";
-	value: T;
-}
-
-interface TaskRejectedResult {
-	status: "rejected";
-	reason: any;
-}
-
-type TaskSettledResult<T> = TaskFulfilledResult<T> | TaskRejectedResult;
