@@ -1,11 +1,10 @@
 {
 	"name": "@apt/task",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"license": "MIT",
 	"exports": {
 		".": "./src/Task.ts",
-		"./polyfill": "./polyfill/Task.ts",
-		"./types": "./types.d.ts"
+		"./polyfill": "./polyfill/Task.ts"
 	},
 	"tasks": {
 		"test:watch": "deno test --watch"
@@ -17,8 +16,7 @@
 		"lib": [
 			"dom",
 			"deno.ns"
-		],
-		"types": ["types.d.ts"]
+		]
 	},
 	"fmt": {
 		"useTabs": true
@@ -26,6 +24,8 @@
 	"lint": {
 		"rules": {
 			"exclude": [
+				// we're extending Promise, which often used "any" in
+				// its type signatures.
 				"no-explicit-any"
 			]
 		}

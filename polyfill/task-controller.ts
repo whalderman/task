@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-import { TaskPriorityTypes } from "./scheduler-priorities.ts";
+import {
+	type TaskPriority,
+	TaskPriorityTypes,
+} from "./scheduler-priorities.ts";
 
 /**
- * The TaskSignal interface represents a signal object that allows you to
- * communicate with a prioritized task, and abort it or change the priority
- * via a TaskController object.
+ * A signal object that allows you to communicate with a prioritized task, aborting it or changing the priority (if required) via a {@link TaskController} object.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskSignal)
  */
 export class TaskSignal extends AbortSignal {
 	private _priority: TaskPriority = "user-visible";
 
 	/**
-	 * The priority of the task, "user-visible" by default.
+	 * The priority of the signal.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskSignal/priority)
 	 */
 	get priority(): TaskPriority {
 		return this._priority;
@@ -34,7 +39,9 @@ export class TaskSignal extends AbortSignal {
 	private _onprioritychange: null | ((...args: any[]) => void) = null;
 
 	/**
-	 * The callback to be called when the priority of the task changes.
+	 * Fired when the priority is changed.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskSignal/prioritychange_event)
 	 */
 	set onprioritychange(callback: (...args: any[]) => void) {
 		if (this._onprioritychange) {
@@ -45,18 +52,32 @@ export class TaskSignal extends AbortSignal {
 	}
 
 	/**
-	 * The callback to be called when the priority of the signal changes.
+	 * Fired when the priority is changed.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskSignal/prioritychange_event)
 	 */
 	get onprioritychange(): null | ((...args: any[]) => void) {
 		return this._onprioritychange;
 	}
 }
 
+/** [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskPriorityChangeEvent/TaskPriorityChangeEvent#options) */
+export interface TaskPriorityChangeEventInit extends EventInit {
+	/** A string indicating the previous priority of the task. One of `"user-blocking"`, `"user-visible"`, or `"background"`. */
+	previousPriority: TaskPriority;
+}
+
 /**
- * Event type used for priority change events:
- * https://wicg.github.io/scheduling-apis/#sec-task-priority-change-event.
+ * The `prioritychange` event, sent to a {@link TaskSignal} if its priority is changed.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskPriorityChangeEvent)
  */
 export class TaskPriorityChangeEvent extends Event {
+	/**
+	 * The priority of the corresponding {@link TaskSignal} _before_ this prioritychange event.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskPriorityChangeEvent/previousPriority)
+	 */
 	previousPriority: TaskPriority;
 
 	/**
@@ -64,7 +85,7 @@ export class TaskPriorityChangeEvent extends Event {
 	 * named 'prioritychange', which is the name used for events triggered by
 	 * TaskController.setPriority().
 	 */
-	constructor(typeArg: string, init: { previousPriority: TaskPriority }) {
+	constructor(typeArg: string, init: TaskPriorityChangeEventInit) {
 		if (!init || !TaskPriorityTypes.includes(init.previousPriority)) {
 			throw new TypeError(`Invalid task priority: '${init.previousPriority}'`);
 		}
@@ -74,17 +95,26 @@ export class TaskPriorityChangeEvent extends Event {
 }
 
 /**
- * TaskController enables changing the priority of tasks associated with its
- * TaskSignal.
+ * {@link TaskController} options.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskController/TaskController#options)
+ */
+export type TaskControllerOptions = {
+	/** The {@link TaskPriority} of the signal associated with this {@link TaskController}. One of `"user-blocking"`, `"user-visible"`, or `"background"`. The default is `"user-visible"`. */
+	priority?: TaskPriority;
+};
+
+/**
+ * A controller object that can be used to both abort and change the priority of one or more prioritized tasks.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskController)
  */
 export class TaskController extends AbortController {
 	private isPriorityChanging_ = false;
+	/** Returns a {@link TaskSignal} instance. The signal is passed to tasks so that they can be aborted or re-prioritized by the controller. */
 	override signal: TaskSignal;
 
-	/**
-	 * @param {{priority: TaskPriority}} init
-	 */
-	constructor(init?: { priority?: TaskPriority }) {
+	constructor(init?: TaskControllerOptions) {
 		super();
 
 		if (!init) init = {};
@@ -108,7 +138,9 @@ export class TaskController extends AbortController {
 	}
 
 	/**
-	 * Change the priority of all tasks associated with this controller's signal.
+	 * Sets the priority of the controller's signal, and hence the priority of any tasks with which it is associated.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskController/setPriority)
 	 */
 	setPriority(priority: TaskPriority) {
 		if (!TaskPriorityTypes.includes(priority)) {

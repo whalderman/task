@@ -30,6 +30,7 @@ function schedulerYield(): Promise<any> {
 	// Use 'user-blocking' priority to get similar scheduling behavior as
 	// scheduler.yield(). Note: we can't reliably inherit priority and abort since
 	// we lose context if async functions are spread across multiple tasks.
+	// @ts-expect-error TypeScript does not include these global types yet.
 	return self.scheduler.postTask(noop, { priority: "user-blocking" });
 }
 

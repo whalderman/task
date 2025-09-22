@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import { TaskPriorityTypes } from "./scheduler-priorities.ts";
+import {
+	type TaskPriority,
+	TaskPriorityTypes,
+} from "./scheduler-priorities.ts";
 
 /**
  * This class manages scheduling and running callbacks using postMessage.

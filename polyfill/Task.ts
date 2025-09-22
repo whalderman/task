@@ -13,33 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Scheduler } from "./scheduler.ts";
-import {
-	TaskController,
-	TaskPriorityChangeEvent,
-	TaskSignal,
-} from "./task-controller.ts";
-import { schedulerYield } from "./yield.ts";
+import * as SchedulerPolyfill from "./scheduler.ts";
+import * as TaskControllerPolyfill from "./task-controller.ts";
+import * as SchedulerYieldPolyfill from "./yield.ts";
 
-if (typeof globalThis.scheduler === "undefined") {
-	console.log("Importing polyfills for Prioritized Task Scheduling API ...");
+// @ts-expect-error TypeScript does not include these global types yet.
+if (typeof scheduler === "undefined") {
 	console.log("Polyfilling globalThis.scheduler ...");
-	globalThis.scheduler = new Scheduler();
+	// @ts-expect-error TypeScript does not include these global types yet.
+	scheduler = new SchedulerPolyfill.Scheduler();
 	console.log("Polyfilling globalThis.TaskController ...");
-	globalThis.TaskController = TaskController;
+	// @ts-expect-error TypeScript does not include these global types yet.
+	TaskController = TaskControllerPolyfill.TaskController;
 	console.log("Polyfilling globalThis.TaskSignal ...");
-	globalThis.TaskSignal = TaskSignal;
+	// @ts-expect-error TypeScript does not include these global types yet.
+	TaskSignal = TaskControllerPolyfill.TaskSignal;
 	console.log("Polyfilling globalThis.TaskPriorityChangeEvent ...");
-	globalThis.TaskPriorityChangeEvent = TaskPriorityChangeEvent;
+	// @ts-expect-error TypeScript does not include these global types yet.
+	TaskPriorityChangeEvent = TaskControllerPolyfill.TaskPriorityChangeEvent;
 	console.log("Polyfill complete.");
-} else if (!globalThis.scheduler.yield) {
-	console.log("Importing polyfill for globalThis.scheduler.yield ...");
+	// @ts-expect-error TypeScript does not include these global types yet.
+} else if (!scheduler.yield) {
 	console.log("Polyfilling globalThis.scheduler.yield ...");
-	globalThis.scheduler.yield = schedulerYield;
+	// @ts-expect-error TypeScript does not include these global types yet.
+	scheduler.yield = SchedulerYieldPolyfill.schedulerYield;
 	console.log("Polyfill complete.");
 }
-
-import "../types.d.ts";
 
 import { Task } from "../src/Task.ts";
 export { Task } from "../src/Task.ts";

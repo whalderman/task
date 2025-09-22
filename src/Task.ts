@@ -1,3 +1,9 @@
+import type { TaskPriority } from "../polyfill/scheduler-priorities.ts";
+import type {
+	TaskController,
+	TaskControllerOptions,
+} from "../polyfill/task-controller.ts";
+
 /**
  * @typeParam T: The type of the value that the Task will resolve to.
  *
@@ -137,6 +143,7 @@ export class Task<T> extends Promise<T> {
 			} catch (e) {
 				reject(e);
 			}
+			// @ts-expect-error TypeScript does not include these global types yet.
 		}, new TaskController(controllerOptions));
 	}
 
@@ -164,6 +171,7 @@ export class Task<T> extends Promise<T> {
 			} catch (e) {
 				reject(e);
 			}
+			// @ts-expect-error TypeScript does not include these global types yet.
 		}, new TaskController({ priority }));
 	}
 
@@ -221,6 +229,7 @@ export class Task<T> extends Promise<T> {
 	): Task<Awaited<P>> {
 		return new Task((resolve, reject) => {
 			return promise.then(resolve, reject);
+			// @ts-expect-error TypeScript does not include these global types yet.
 		}, new TaskController(controllerOptions));
 	}
 
@@ -237,6 +246,7 @@ export class Task<T> extends Promise<T> {
 	): Task<Awaited<P>> {
 		return new Task((resolve, reject) => {
 			return promise.then(resolve, reject);
+			// @ts-expect-error TypeScript does not include these global types yet.
 		}, new TaskController({ priority }));
 	}
 
@@ -431,9 +441,11 @@ export class Task<T> extends Promise<T> {
 			resolve: (value: T | PromiseLike<T>) => void,
 			reject: (reason?: any) => void,
 		) => void,
-		controller: TaskController = new TaskController(
-			Task.defaultControllerOptions,
-		),
+		controller: TaskController =
+			// @ts-expect-error TypeScript does not include these global types yet.
+			new TaskController(
+				Task.defaultControllerOptions,
+			),
 	) {
 		const executorProxy = new Proxy(executor, {
 			apply(
@@ -447,11 +459,13 @@ export class Task<T> extends Promise<T> {
 						_thisArg,
 						[value]: Parameters<typeof resolve>,
 					) {
+						// @ts-expect-error TypeScript does not include these global types yet.
 						return scheduler.postTask(() => originalResolve(value), controller);
 					},
 				});
 				const rejectProxy = new Proxy(reject, {
 					apply(originalReject, _thisArg, [reason]: Parameters<typeof reject>) {
+						// @ts-expect-error TypeScript does not include these global types yet.
 						return scheduler.postTask(() => originalReject(reason), controller);
 					},
 				});

@@ -16,7 +16,11 @@
 
 import { HostCallback } from "./host-callback.ts";
 import { IntrusiveTaskQueue as TaskQueue } from "./intrusive-task-queue.ts";
-import { TaskPriorityTypes } from "./scheduler-priorities.ts";
+import {
+	type TaskPriority,
+	TaskPriorityTypes,
+} from "./scheduler-priorities.ts";
+import type { TaskSignal } from "./task-controller.ts";
 
 export class SchedulerTask {
 	callback: (...args: any[]) => void;
@@ -98,9 +102,7 @@ export class SchedulerTask {
 	}
 }
 
-/**
- * Polyfill of the scheduler API: https://wicg.github.io/scheduling-apis/.
- */
+/** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Scheduler) */
 export class Scheduler {
 	/**
 	 * Continuation and task queue for each priority, in that order.
@@ -135,11 +137,11 @@ export class Scheduler {
 	}
 
 	/**
-	 * Returns a promise that is resolved in a new task.
+	 * Returns a promise that yields to the event loop when awaited, allowing continuation in a new task.
 	 *
-	 * @return {!Promise<*>}
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Scheduler/yield)
 	 */
-	yield(): Promise<any> {
+	yield(): Promise<void> {
 		// Inheritance is not supported. Use default options instead.
 		return this.postTaskOrContinuation(
 			() => {},
@@ -149,15 +151,16 @@ export class Scheduler {
 	}
 
 	/**
-	 * Schedules `callback` to be run asynchronously, returning a promise that is
-	 * resolved with the callback's result when it finishes running. The resulting
-	 * promise is rejected if the callback throws an exception, or if the
-	 * associated signal is aborted.
+	 * Adds a task to the scheduler as a callback, optionally specifying a priority, delay, and/or a signal for aborting the task.
+	 * @param callback A callback function that implements the task. The return value of the callback is used to resolve the promise returned by this function.
+	 * @param options {@link SchedulerPostTaskOptions} options.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Scheduler/postTask)
 	 */
-	postTask(
-		callback: () => any,
+	postTask<T extends unknown>(
+		callback: () => T,
 		options?: SchedulerPostTaskOptions,
-	): Promise<any> {
+	): Promise<T> {
 		return this.postTaskOrContinuation(callback, options, false);
 	}
 
@@ -431,3 +434,17 @@ export class Scheduler {
 		return { priority: null, type: 0 };
 	}
 }
+
+/**
+ * {@link Scheduler.postTask} options.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Scheduler/postTask#options)
+ */
+export type SchedulerPostTaskOptions = {
+	/** The immutable {@link TaskPriority} of the task. One of `"user-blocking"`, `"user-visible"`, or `"background"`. If set, this priority is used for the lifetime of the task and priority set on the `signal` is ignored. */
+	priority?: TaskPriority;
+	/** An {@link AbortSignal} or {@link TaskSignal} that can be used to abort or re-prioritize the task (from its associated controller). The signal's priority is ignored if `priority` is set. */
+	signal?: AbortSignal | TaskSignal;
+	/** The minimum amount of time after which the task will be added to the scheduler queue, in whole milliseconds. The actual delay may be higher than specified, but will not be less. The default delay is 0. */
+	delay?: number;
+};

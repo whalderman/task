@@ -22,3 +22,10 @@ export const TaskPriorityTypes = [
 	"user-visible",
 	"background",
 ] as const;
+
+/**
+ * Task priorities that determine the order in which tasks run.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Prioritized_Task_Scheduling_API#task_priorities)
+ */
+export type TaskPriority = typeof TaskPriorityTypes[number];
