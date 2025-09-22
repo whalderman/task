@@ -1,11 +1,4 @@
-// Deno requires a polyfill.
-// The polyfill from the chrome team doesn't work. 🤷‍♂️
-
-import {
-	assertInstanceOf,
-	assertRejects,
-	assertStrictEquals,
-} from "@std/assert";
+import { assertInstanceOf, assertStrictEquals } from "@std/assert";
 import Task from "./Task.ts";
 import "./polyfill/types.d.ts";
 
