@@ -40,6 +40,37 @@ const validPrioritySet: Set<polyfill.TaskPriority> = new Set([
 	"user-visible",
 ]);
 
+interface PostTaskInit
+	extends Omit<polyfill.SchedulerPostTaskOptions, "signal"> {
+}
+class PostTaskController extends TaskController implements PostTaskInit {
+	#delay?: number;
+	/**
+	 * Returns a single-use delay value (in milliseconds) for the next
+	 * task scheduled with this controller. After being accessed, the
+	 * delay is cleared (set to `undefined`).
+	 */
+	get delay(): number | undefined {
+		const value = this.#delay;
+		this.#delay = undefined;
+		return value;
+	}
+
+	/**
+	 * Sets a single-use delay value (in milliseconds) for the next
+	 * task scheduled with this controller.
+	 * @param delay A delay in milliseconds.
+	 */
+	setNextDelay(delay: number | undefined) {
+		this.#delay = delay;
+	}
+
+	constructor(init?: PostTaskInit) {
+		super(init);
+		this.#delay = init?.delay;
+	}
+}
+
 /**
  * @typeParam T: The type of the value that the Task will resolve to.
  *
@@ -125,11 +156,11 @@ const validPrioritySet: Set<polyfill.TaskPriority> = new Set([
  * ```
  */
 export class Task<T> extends Promise<T> {
-	static #defaultControllerInit = {
+	static #defaultInit = {
 		priority: "background" as polyfill.TaskPriority,
-	} satisfies polyfill.TaskControllerInit;
+	} satisfies PostTaskInit;
 	static get defaultPriority(): polyfill.TaskPriority {
-		return this.#defaultControllerInit.priority;
+		return this.#defaultInit.priority;
 	}
 	static set defaultPriority(priority: polyfill.TaskPriority) {
 		if (!validPrioritySet.has(priority)) {
@@ -138,33 +169,7 @@ export class Task<T> extends Promise<T> {
 			);
 			return;
 		}
-		this.#defaultControllerInit.priority = priority;
-	}
-
-	/**
-	 * Executes a callback function and wraps its result or thrown error
-	 * in a new Task with the provided TaskController. This is useful
-	 * for starting a task chain from a synchronous function.
-	 *
-	 * @typeParam Callback The type of the callback function.
-	 * @param controller A TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
-	 * @param callback The function to execute.
-	 * @param args The arguments to pass to the callback function.
-	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
-	 */
-	static runWithController<Callback extends (...args: any[]) => any>(
-		controller: polyfill.TaskController,
-		callback: Callback,
-		...args: Parameters<Callback>
-	): Task<Awaited<ReturnType<Callback>>> {
-		return new Task<Awaited<ReturnType<Callback>>>((resolve, reject) => {
-			try {
-				const value = callback(...args);
-				resolve(value);
-			} catch (e) {
-				reject(e);
-			}
-		}, controller);
+		this.#defaultInit.priority = priority;
 	}
 
 	/**
@@ -173,51 +178,27 @@ export class Task<T> extends Promise<T> {
 	 * TaskControllerInit. This is useful for starting a task chain from a synchronous function.
 	 *
 	 * @typeParam Callback The type of the callback function.
-	 * @param controllerInit Options for a new TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
+	 * @param options Options for a new TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
 	 * @param callback The function to execute.
 	 * @param args The arguments to pass to the callback function.
 	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
 	 */
 	static runWithOptions<Callback extends (...args: any[]) => any>(
-		controllerInit: polyfill.TaskControllerInit,
+		options: PostTaskInit,
 		callback: Callback,
 		...args: Parameters<Callback>
 	): Task<Awaited<ReturnType<Callback>>> {
-		return new Task<Awaited<ReturnType<Callback>>>((resolve, reject) => {
-			try {
-				const value = callback(...args);
-				resolve(value);
-			} catch (e) {
-				reject(e);
-			}
-		}, new TaskController(controllerInit));
-	}
-
-	/**
-	 * Executes a callback function and wraps its result or thrown error
-	 * in a new Task and TaskController with the specified default
-	 * priority. This is useful for starting a task chain from a
-	 * synchronous function.
-	 *
-	 * @typeParam Callback The type of the callback function.
-	 * @param callback The function to execute.
-	 * @param priority The default priority to use in the returned Task's TaskController. Used to dynamically control execution priority of subsequent callbacks.
-	 * @param args The arguments to pass to the callback function.
-	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
-	 */
-	static runWithPriority<Callback extends (...args: any[]) => any>(
-		priority: polyfill.TaskPriority,
-		callback: Callback,
-		...args: Parameters<Callback>
-	): Task<Awaited<ReturnType<Callback>>> {
-		return new Task<Awaited<ReturnType<Callback>>>((resolve, reject) => {
-			try {
-				const value = callback(...args);
-				resolve(value);
-			} catch (e) {
-				reject(e);
-			}
-		}, new TaskController({ priority }));
+		return new Task<Awaited<ReturnType<Callback>>>(
+			(resolve, reject) => {
+				try {
+					const value = callback(...args);
+					resolve(value);
+				} catch (e) {
+					reject(e);
+				}
+			},
+			options,
+		);
 	}
 
 	/**
@@ -248,50 +229,17 @@ export class Task<T> extends Promise<T> {
 	/**
 	 * Wraps an existing Promise in a Task instance.
 	 * @typeParam P: The type of the Promise.
-	 * @param controller A TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
-	 * @param promise The promise to wrap.
-	 * @returns A new Task that mirrors the state of the provided promise.
-	 */
-	static wrapWithController<P extends Promise<any>>(
-		controller: polyfill.TaskController,
-		promise: P,
-	): Task<Awaited<P>> {
-		return new Task(
-			(resolve, reject) => promise.then(resolve, reject),
-			controller,
-		);
-	}
-
-	/**
-	 * Wraps an existing Promise in a Task instance.
-	 * @typeParam P: The type of the Promise.
-	 * @param controllerOptions Options for a new TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
+	 * @param options Options for a new TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
 	 * @param promise The promise to wrap.
 	 * @returns A new Task that mirrors the state of the provided promise.
 	 */
 	static wrapWithOptions<P extends Promise<any>>(
-		controllerInit: polyfill.TaskControllerInit,
+		options: PostTaskInit,
 		promise: P,
 	): Task<Awaited<P>> {
 		return new Task((resolve, reject) => {
 			return promise.then(resolve, reject);
-		}, new TaskController(controllerInit));
-	}
-
-	/**
-	 * Wraps an existing Promise in a Task instance.
-	 * @typeParam P: The type of the Promise.
-	 * @param priority The default priority to use in the returned Task's TaskController. Used to dynamically control execution priority of subsequent callbacks.
-	 * @param promise The promise to wrap.
-	 * @returns A new Task that mirrors the state of the provided promise.
-	 */
-	static wrapWithPriority<P extends Promise<any>>(
-		priority: polyfill.TaskPriority,
-		promise: P,
-	): Task<Awaited<P>> {
-		return new Task((resolve, reject) => {
-			return promise.then(resolve, reject);
-		}, new TaskController({ priority }));
+		}, options);
 	}
 
 	/**
@@ -452,20 +400,13 @@ export class Task<T> extends Promise<T> {
 		return Task.wrap(Promise.resolve(value));
 	}
 
-	controller: polyfill.TaskController;
+	readonly controller: PostTaskController;
 
 	/**
 	 * A convenience property for getting this Task's priority.
 	 */
 	get priority(): polyfill.TaskPriority {
 		return this.controller.signal.priority;
-	}
-
-	/**
-	 * A convenience property for setting the priority of this Task.
-	 */
-	set priority(priority: polyfill.TaskPriority) {
-		this.controller.setPriority(priority);
 	}
 
 	/**
@@ -481,10 +422,18 @@ export class Task<T> extends Promise<T> {
 			resolve: (value: T | PromiseLike<T>) => void,
 			reject: (reason?: any) => void,
 		) => void,
-		controller: polyfill.TaskController = new TaskController(
-			Task.#defaultControllerInit,
-		),
+		options: PostTaskInit | PostTaskController = new PostTaskController({
+			priority: Task.defaultPriority,
+		}),
 	) {
+		const controller = options instanceof PostTaskController
+			? options
+			: Object.assign(
+				new PostTaskController({
+					priority: options.priority ?? Task.defaultPriority,
+				}),
+				options,
+			);
 		const executorProxy = new Proxy(executor, {
 			apply(
 				originalExecutor,
@@ -497,12 +446,18 @@ export class Task<T> extends Promise<T> {
 						_thisArg,
 						[value]: Parameters<typeof resolve>,
 					) {
-						return scheduler.postTask(() => originalResolve(value), controller);
+						return scheduler.postTask(
+							() => originalResolve(value),
+							controller,
+						);
 					},
 				});
 				const rejectProxy = new Proxy(reject, {
 					apply(originalReject, _thisArg, [reason]: Parameters<typeof reject>) {
-						return scheduler.postTask(() => originalReject(reason), controller);
+						return scheduler.postTask(
+							() => originalReject(reason),
+							controller,
+						);
 					},
 				});
 				return originalExecutor(resolveProxy, rejectProxy);
@@ -573,19 +528,7 @@ export class Task<T> extends Promise<T> {
 			| null,
 	): Task<T | TResult> {
 		return new Task(
-			(resolve, reject) =>
-				super.catch((reason) => {
-					if (onrejected) {
-						try {
-							const result = onrejected(reason);
-							resolve(result);
-						} catch (e) {
-							reject(e);
-						}
-					} else {
-						reject(reason);
-					}
-				}),
+			(resolve, reject) => super.catch(onrejected).then(resolve, reject),
 			// reuse the controller to maintain task priority settings
 			this.controller,
 		);
