@@ -5,6 +5,5 @@
 		"lib": ["ESNext", "DOM", "DOM.Iterable", "DOM.AsyncIterable", "WebWorker", "Webworker.Iterable", "WebWorker.AsyncIterable"],
 		"declaration": true,
 		"outDir": "dist"
-	},
-	"files": ["src/Task.ts", "src/polyfill/types.d.ts"]
+	}
 }

@@ -1,5 +1,18 @@
-import { assertInstanceOf, assertStrictEquals } from "@std/assert";
-import Task from "../polyfill/Task.ts";
+import Task from "@apt/task";
+import {
+	assertExists,
+	assertInstanceOf,
+	assertRejects,
+	assertStrictEquals,
+} from "@std/assert";
+
+Deno.test("Expected globals are defined", () => {
+	assertExists(scheduler);
+	assertExists(scheduler.yield);
+	assertExists(TaskController);
+	assertExists(TaskSignal);
+	assertExists(TaskPriorityChangeEvent);
+});
 
 Deno.test("Task is instanceof Promise", async () => {
 	const task = new Task<1>((resolve) => {
@@ -25,13 +38,20 @@ Deno.test("Task resolves properly", async () => {
 	assertStrictEquals(resolvedTask, 1);
 });
 
-// Deno.test("Task rejects properly", async () => {
-// 	await assertRejects(() => Task.reject("Expected"));
-// 	await assertRejects(() =>
-// 		new Task<void>((_, reject) => reject(new Error("Expected")))
-// 	);
-// 	await assertRejects(() => new Task<void>((_, reject) => reject("Expected")));
-// });
+Deno.test("Task rejects properly", async () => {
+	await assertRejects(
+		() => Task.reject<void>("Expected"),
+		"Expected Task.reject to reject with 'Expected'",
+	);
+	await assertRejects(
+		() => new Task<void>((_, reject) => reject(new Error("Expected"))),
+		"Expected new Task to reject with Error('Expected')",
+	);
+	await assertRejects(
+		() => new Task<void>((_, reject) => reject("Expected")),
+		"Expected new Task to reject with 'Expected'",
+	);
+});
 
 Deno.test("Task reuses TaskController", async () => {
 	const taskStep1 = new Task<number>((resolve) => {

@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
+import type { TaskPriority } from "./types.d.ts";
+
 /**
  * The list of scheduler priorities in order from highest to lowest.
  */
-export const TaskPriorityTypes = [
+export const TaskPriorityList: TaskPriority[] = [
 	"user-blocking",
 	"user-visible",
 	"background",
 ] as const;
-
-/**
- * Task priorities that determine the order in which tasks run.
- *
- * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Prioritized_Task_Scheduling_API#task_priorities)
- */
-export type TaskPriority = typeof TaskPriorityTypes[number];

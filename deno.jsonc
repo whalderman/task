@@ -3,8 +3,7 @@
 	"version": "0.2.2",
 	"license": "MIT",
 	"exports": {
-		".": "./src/Task.ts",
-		"./polyfill": "./polyfill/Task.ts"
+		".": "./src/Task.ts"
 	},
 	"tasks": {
 		"test:watch": "deno test --watch"
