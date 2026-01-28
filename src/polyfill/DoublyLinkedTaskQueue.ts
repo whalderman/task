@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { SchedulerTask } from "./scheduler.ts";
+import { SchedulerTask } from "./Scheduler.ts";
 
 /**
  * This represents the overall task queuing order and is used for moving tasks
@@ -38,42 +38,44 @@ let nextSequence: number = 0;
  *  - tq_next_: A pointer to the next task.
  */
 class DoublyLinkedTaskQueue {
-	headTask: null | SchedulerTask = null;
-	private tailTask: null | SchedulerTask = null;
+	precedingTask: null | SchedulerTask = null;
+	private followingTask: null | SchedulerTask = null;
 
 	/**
 	 * Constructs an empty IntrusiveTaskQueue.
 	 */
 	constructor() {}
 
-	push(task: SchedulerTask) {
-		if (typeof task !== "object") throw new TypeError("Task must be an object");
-
-		task.sequenceId = nextSequence++;
-
-		if (!this.headTask) {
-			task.prev = null;
-			this.headTask = task;
-		} else {
-			task.prev = this.tailTask;
-			if (this.tailTask) this.tailTask.next = task;
+	push(newTask: SchedulerTask) {
+		if (!(newTask instanceof SchedulerTask)) {
+			throw new TypeError("task must be an instance of SchedulerTask");
 		}
 
-		task.next = null;
-		this.tailTask = task;
+		newTask.sequenceId = nextSequence++;
+
+		if (!this.precedingTask) {
+			newTask.preceding = null;
+			this.precedingTask = newTask;
+		} else {
+			newTask.preceding = this.followingTask;
+			if (this.followingTask) this.followingTask.next = newTask;
+		}
+
+		newTask.next = null;
+		this.followingTask = newTask;
 	}
 
 	/** @return The oldest task or null of the queue is empty. */
 	takeNextTask(): SchedulerTask | null {
-		if (!this.headTask) return null;
-		const task = this.headTask;
+		if (!this.precedingTask) return null;
+		const task = this.precedingTask;
 		this.remove(task);
 		return task;
 	}
 
 	/**
 	 * Merges all tasks from `sourceQueue` into this task queue for which
-	 * `selector` returns true . Tasks are insterted into this queue based on
+	 * `selector` returns true. Tasks are inserted into this queue based on
 	 * their sequence number.
 	 *
 	 * @param sourceQueue
@@ -88,12 +90,12 @@ class DoublyLinkedTaskQueue {
 		}
 		if (sourceQueue == null) throw new Error("sourceQueue cannot be null");
 
-		let currentTask = this.headTask;
+		let currentTask = this.precedingTask;
 		let previousTask = null;
-		let iterator = sourceQueue.headTask;
+		let iterator = sourceQueue.precedingTask;
 
 		while (iterator) {
-			// Advance the iterator now before we mutate it and ivalidate the
+			// Advance the iterator now before we mutate it and invalidate the
 			// pointers.
 			const taskToMove = iterator;
 			iterator = iterator.next;
@@ -118,12 +120,11 @@ class DoublyLinkedTaskQueue {
 	/**
 	 * Insert `task` into this queue directly after `parentTask`.
 	 * @param task The task to insert.
-	 * @param parentTask The task preceding `task` in this queue, or
-	 *    null if `task` should be inserted at the beginning.
+	 * @param parentTask The task preceding `task` in this queue, or null if `task` should be inserted at the beginning.
 	 */
 	private insert(task: SchedulerTask, parentTask: SchedulerTask | null) {
 		// We can simply push the new task if it belongs at the end.
-		if (parentTask == this.tailTask) {
+		if (parentTask == this.followingTask) {
 			this.push(task);
 			return;
 		}
@@ -131,26 +132,32 @@ class DoublyLinkedTaskQueue {
 		// `nextTask` is the next task in the list, which should not be null since
 		// `parentTask` is not the tail (which is the only task with a null next
 		// pointer).
-		const nextTask = parentTask ? parentTask.next : this.headTask;
+		const nextTask = parentTask ? parentTask.next : this.precedingTask;
 
 		task.next = nextTask;
-		nextTask!.prev = task;
+		nextTask!.preceding = task;
 
-		task.prev = parentTask;
+		task.preceding = parentTask;
 
 		if (parentTask != null) {
 			parentTask.next = task;
 		} else {
-			this.headTask = task;
+			this.precedingTask = task;
 		}
 	}
 
 	private remove(task: SchedulerTask) {
-		if (task === this.headTask) this.headTask = task.next;
-		if (task === this.tailTask) this.tailTask = this.tailTask.prev;
-		if (task.next) task.next.prev = task.prev;
-		if (task.prev) task.prev.next = task.next;
+		// If removing the head task, update the head pointer to the next task.
+		if (task === this.precedingTask) this.precedingTask = task.next;
+		// If removing the tail task, update the tail pointer to the previous task.
+		if (task === this.followingTask) {
+			this.followingTask = this.followingTask.preceding;
+		}
+		// If there is a next task, update its previous pointer.
+		if (task.next) task.next.preceding = task.preceding;
+		// If there is a preceding task, update its next pointer.
+		if (task.preceding) task.preceding.next = task.next;
 	}
 }
 
-export { DoublyLinkedTaskQueue as IntrusiveTaskQueue };
+export { DoublyLinkedTaskQueue };

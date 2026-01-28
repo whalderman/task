@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-import {
-	type TaskPriority,
-	TaskPriorityTypes,
-} from "./scheduler-priorities.ts";
+import { TaskPriorityList } from "./TaskPriority.ts";
+import type { TaskPriority, TaskSignalAnyInit } from "./types.d.ts";
 
 /**
  * A signal object that allows you to communicate with a prioritized task, aborting it or changing the priority (if required) via a {@link TaskController} object.
@@ -25,6 +23,52 @@ import {
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskSignal)
  */
 export class TaskSignal extends AbortSignal {
+	/**
+	 * The **`TaskSignal.any()`** static method takes an iterable of AbortSignal objects and returns a TaskSignal. The returned task signal is aborted when any of the abort signals is aborted.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskSignal/any_static)
+	 */
+	static override any(
+		signals: AbortSignal[],
+		init?: TaskSignalAnyInit,
+	): TaskSignal {
+		const taskSignal = new TaskSignal();
+
+		const onAbort = () => {
+			taskSignal.dispatchEvent(new Event("abort"));
+			for (const signal of signals) {
+				signal.removeEventListener("abort", onAbort);
+			}
+		};
+
+		for (const signal of signals) {
+			if (signal.aborted) {
+				taskSignal.dispatchEvent(new Event("abort"));
+				break;
+			}
+			signal.addEventListener(
+				"abort",
+				() => taskSignal.dispatchEvent(new Event("abort")),
+			);
+			signal.addEventListener("abort", onAbort);
+		}
+
+		if (init && init.priority) {
+			if (TaskPriorityList.includes(init.priority as TaskPriority)) {
+				Object.defineProperty(taskSignal, "_priority", {
+					configurable: false,
+					enumerable: false,
+					writable: false,
+					value: init.priority,
+				});
+			} else {
+				throw new TypeError(`Invalid task priority: '${init.priority}'`);
+			}
+		}
+
+		return taskSignal;
+	}
+
 	private _priority: TaskPriority = "user-visible";
 
 	/**
@@ -86,7 +130,7 @@ export class TaskPriorityChangeEvent extends Event {
 	 * TaskController.setPriority().
 	 */
 	constructor(typeArg: string, init: TaskPriorityChangeEventInit) {
-		if (!init || !TaskPriorityTypes.includes(init.previousPriority)) {
+		if (!init || !TaskPriorityList.includes(init.previousPriority)) {
 			throw new TypeError(`Invalid task priority: '${init.previousPriority}'`);
 		}
 		super(typeArg);
@@ -100,7 +144,7 @@ export class TaskPriorityChangeEvent extends Event {
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskController/TaskController#options)
  */
 export type TaskControllerOptions = {
-	/** The {@link TaskPriority} of the signal associated with this {@link TaskController}. One of `"user-blocking"`, `"user-visible"`, or `"background"`. The default is `"user-visible"`. */
+	/** The {@link TaskPriorityList} of the signal associated with this {@link TaskController}. One of `"user-blocking"`, `"user-visible"`, or `"background"`. The default is `"user-visible"`. */
 	priority?: TaskPriority;
 };
 
@@ -123,7 +167,7 @@ export class TaskController extends AbortController {
 		}
 
 		const priority = !init.priority ? "user-visible" : init.priority;
-		if (!TaskPriorityTypes.includes(priority)) {
+		if (!TaskPriorityList.includes(priority)) {
 			throw new TypeError(`Invalid task priority: '${priority}'`);
 		}
 
@@ -143,7 +187,7 @@ export class TaskController extends AbortController {
 	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/TaskController/setPriority)
 	 */
 	setPriority(priority: TaskPriority) {
-		if (!TaskPriorityTypes.includes(priority)) {
+		if (!TaskPriorityList.includes(priority)) {
 			throw new TypeError("Invalid task priority: " + priority);
 		}
 		if (this.isPriorityChanging_) throw new DOMException("", "NotAllowedError");

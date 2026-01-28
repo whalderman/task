@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-import {
-	type TaskPriority,
-	TaskPriorityTypes,
-} from "./scheduler-priorities.ts";
+import { TaskPriorityList } from "./TaskPriority.ts";
+import type { TaskPriority } from "./types.d.ts";
 
 let messageIdSequence = 0;
 function nextMessageId() {
@@ -102,9 +100,7 @@ class HostCallback {
 	canceled = false;
 	/**
 	 * @param callback
-	 * @param priority The scheduler priority of the associated host
-	 *     callback. This is used to determine which type of underlying API to
-	 *     use. This can be null if delay is set.
+	 * @param priority The scheduler priority of the associated host callback. This is used to determine which type of underlying API to use. This can be `null` if delay is set.
 	 * @param delay An optional delay. Tasks with a delay will
 	 *     ignore the `priority` parameter and use setTimeout.
 	 */
@@ -179,7 +175,7 @@ class HostCallback {
 
 		// This shouldn't happen since Scheduler checks the priority before creating
 		// a HostCallback, but fail loudly in case it does.
-		if (!TaskPriorityTypes.includes(priority as TaskPriority)) {
+		if (!TaskPriorityList.includes(priority as TaskPriority)) {
 			throw new TypeError(`Invalid task priority : ${priority}`);
 		}
 

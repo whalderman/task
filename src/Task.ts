@@ -1,8 +1,43 @@
-import type { TaskPriority } from "../polyfill/scheduler-priorities.ts";
-import type {
-	TaskController,
-	TaskControllerOptions,
-} from "../polyfill/task-controller.ts";
+import type * as polyfill from "./polyfill/types.d.ts";
+
+if (typeof globalThis.scheduler === "undefined") {
+	console.log("Polyfilling globalThis.scheduler ...");
+	const polyfill = await import("./polyfill/Scheduler.ts");
+	globalThis.scheduler = new polyfill.Scheduler();
+}
+if (typeof globalThis.TaskController === "undefined") {
+	console.log("Polyfilling globalThis.TaskController ...");
+	const polyfill = await import("./polyfill/TaskController.ts");
+	globalThis.TaskController = polyfill.TaskController;
+}
+if (typeof globalThis.TaskSignal === "undefined") {
+	console.log("Polyfilling globalThis.TaskSignal ...");
+	const polyfill = await import("./polyfill/TaskController.ts");
+	globalThis.TaskSignal = polyfill.TaskSignal;
+}
+if (typeof globalThis.TaskPriorityChangeEvent === "undefined") {
+	console.log("Polyfilling globalThis.TaskPriorityChangeEvent ...");
+	const polyfill = await import("./polyfill/TaskController.ts");
+	globalThis.TaskPriorityChangeEvent = polyfill.TaskPriorityChangeEvent;
+}
+if (typeof globalThis.scheduler.yield === "undefined") {
+	console.log("Polyfilling globalThis.scheduler.yield ...");
+	const polyfill = await import("./polyfill/Scheduler.ts");
+	globalThis.scheduler.yield = polyfill.Scheduler.prototype.yield;
+}
+
+declare global {
+	var scheduler: polyfill.Scheduler;
+	var TaskController: typeof polyfill.TaskController;
+	var TaskPriorityChangeEvent: typeof polyfill.TaskPriorityChangeEvent;
+	var TaskSignal: typeof polyfill.TaskSignal;
+}
+
+const validPrioritySet: Set<polyfill.TaskPriority> = new Set([
+	"background",
+	"user-blocking",
+	"user-visible",
+]);
 
 /**
  * @typeParam T: The type of the value that the Task will resolve to.
@@ -58,16 +93,16 @@ import type {
  * ```
  *
  * The default priority for all Task objects can
- * be set with `Task.defaultControllerOptions`:
+ * be set with `Task.defaultPriority`:
  *
  * @example
  * ```js
- * // lowest priority, the default for Task objects
- * Task.defaultControllerOptions = "background";
- * // middle priority, the default for the Scheduler API
- * Task.defaultControllerOptions = "user-visible";
- * // highest priority
- * Task.defaultControllerOptions = "user-blocking";
+ * // low priority (default)
+ * Task.defaultPriority = "background";
+ * // base priority
+ * Task.defaultPriority = "user-visible";
+ * // high priority
+ * Task.defaultPriority = "user-blocking";
  * ```
  *
  * The priority of a Task and its subsequent chained Tasks (`then`,
@@ -89,9 +124,21 @@ import type {
  * ```
  */
 export class Task<T> extends Promise<T> {
-	static defaultControllerOptions: TaskControllerOptions = {
-		priority: "background",
-	};
+	static #defaultControllerInit = {
+		priority: "background" as polyfill.TaskPriority,
+	} satisfies polyfill.TaskControllerInit;
+	static get defaultPriority(): polyfill.TaskPriority {
+		return this.#defaultControllerInit.priority;
+	}
+	static set defaultPriority(priority: polyfill.TaskPriority) {
+		if (!validPrioritySet.has(priority)) {
+			console.error(
+				`Invalid Task priority (${priority}). Must be one of: "background", "user-visible", or "user-blocking".`,
+			);
+			return;
+		}
+		this.#defaultControllerInit.priority = priority;
+	}
 
 	/**
 	 * Executes a callback function and wraps its result or thrown error
@@ -105,7 +152,7 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
 	 */
 	static runWithController<Callback extends (...args: any[]) => any>(
-		controller: TaskController,
+		controller: polyfill.TaskController,
 		callback: Callback,
 		...args: Parameters<Callback>
 	): Task<Awaited<ReturnType<Callback>>> {
@@ -122,17 +169,16 @@ export class Task<T> extends Promise<T> {
 	/**
 	 * Executes a callback function and wraps its result or thrown error
 	 * in a new Task and TaskController with the specified
-	 * TaskControllerOptions. This is useful for starting a task chain
-	 * from a synchronous function.
+	 * TaskControllerInit. This is useful for starting a task chain from a synchronous function.
 	 *
-	 * @typeParam C:allback The type of the callback function.
-	 * @param controllerOptions Options for a new TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
+	 * @typeParam Callback The type of the callback function.
+	 * @param controllerInit Options for a new TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
 	 * @param callback The function to execute.
 	 * @param args The arguments to pass to the callback function.
 	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
 	 */
 	static runWithOptions<Callback extends (...args: any[]) => any>(
-		controllerOptions: TaskControllerOptions,
+		controllerInit: polyfill.TaskControllerInit,
 		callback: Callback,
 		...args: Parameters<Callback>
 	): Task<Awaited<ReturnType<Callback>>> {
@@ -143,8 +189,7 @@ export class Task<T> extends Promise<T> {
 			} catch (e) {
 				reject(e);
 			}
-			// @ts-expect-error TypeScript does not include these global types yet.
-		}, new TaskController(controllerOptions));
+		}, new TaskController(controllerInit));
 	}
 
 	/**
@@ -153,14 +198,14 @@ export class Task<T> extends Promise<T> {
 	 * priority. This is useful for starting a task chain from a
 	 * synchronous function.
 	 *
-	 * @typeParam C:allback The type of the callback function.
+	 * @typeParam Callback The type of the callback function.
 	 * @param callback The function to execute.
 	 * @param priority The default priority to use in the returned Task's TaskController. Used to dynamically control execution priority of subsequent callbacks.
 	 * @param args The arguments to pass to the callback function.
 	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
 	 */
 	static runWithPriority<Callback extends (...args: any[]) => any>(
-		priority: TaskPriority,
+		priority: polyfill.TaskPriority,
 		callback: Callback,
 		...args: Parameters<Callback>
 	): Task<Awaited<ReturnType<Callback>>> {
@@ -171,7 +216,6 @@ export class Task<T> extends Promise<T> {
 			} catch (e) {
 				reject(e);
 			}
-			// @ts-expect-error TypeScript does not include these global types yet.
 		}, new TaskController({ priority }));
 	}
 
@@ -181,7 +225,7 @@ export class Task<T> extends Promise<T> {
 	 * priority. This is useful for starting a task chain from a
 	 * synchronous function.
 	 *
-	 * @typeParam C:allback The type of the callback function.
+	 * @typeParam Callback The type of the callback function.
 	 * @param callback The function to execute.
 	 * @param args The arguments to pass to the callback function.
 	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
@@ -208,12 +252,13 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that mirrors the state of the provided promise.
 	 */
 	static wrapWithController<P extends Promise<any>>(
-		controller: TaskController,
+		controller: polyfill.TaskController,
 		promise: P,
 	): Task<Awaited<P>> {
-		return new Task((resolve, reject) => {
-			return promise.then(resolve, reject);
-		}, controller);
+		return new Task(
+			(resolve, reject) => promise.then(resolve, reject),
+			controller,
+		);
 	}
 
 	/**
@@ -224,13 +269,12 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that mirrors the state of the provided promise.
 	 */
 	static wrapWithOptions<P extends Promise<any>>(
-		controllerOptions: TaskControllerOptions,
+		controllerInit: polyfill.TaskControllerInit,
 		promise: P,
 	): Task<Awaited<P>> {
 		return new Task((resolve, reject) => {
 			return promise.then(resolve, reject);
-			// @ts-expect-error TypeScript does not include these global types yet.
-		}, new TaskController(controllerOptions));
+		}, new TaskController(controllerInit));
 	}
 
 	/**
@@ -241,12 +285,11 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that mirrors the state of the provided promise.
 	 */
 	static wrapWithPriority<P extends Promise<any>>(
-		priority: TaskPriority,
+		priority: polyfill.TaskPriority,
 		promise: P,
 	): Task<Awaited<P>> {
 		return new Task((resolve, reject) => {
 			return promise.then(resolve, reject);
-			// @ts-expect-error TypeScript does not include these global types yet.
 		}, new TaskController({ priority }));
 	}
 
@@ -257,9 +300,7 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that mirrors the state of the provided promise.
 	 */
 	static wrap<P extends Promise<any>>(promise: P): Task<Awaited<P>> {
-		return new Task((resolve, reject) => {
-			return promise.then(resolve, reject);
-		});
+		return new Task((resolve, reject) => promise.then(resolve, reject));
 	}
 
 	/**
@@ -335,18 +376,15 @@ export class Task<T> extends Promise<T> {
 	 * ```
 	 */
 	static override withResolvers<T>(): TaskWithResolvers<T> {
-		let resolve: (value: T | PromiseLike<T>) => void,
-			reject: (reason?: any) => void;
+		let resolve!: (value: T | PromiseLike<T>) => void;
+		let reject!: (reason?: any) => void;
 		const task = new Task<T>((res, rej) => {
 			resolve = res;
 			reject = rej;
 		});
 		return {
-			task,
 			promise: task,
-			// @ts-expect-error deno can't handle this
 			resolve,
-			// @ts-expect-error deno can't handle this
 			reject,
 		};
 	}
@@ -384,7 +422,7 @@ export class Task<T> extends Promise<T> {
 
 	/**
 	 * Creates a new rejected Task for the provided reason.
-	 * @param reason The reason the promise was rejected.
+	 * @param reason The reason the task was rejected.
 	 * @returns A new rejected Task.
 	 */
 	static override reject<T = never>(reason?: any): Task<T> {
@@ -398,13 +436,13 @@ export class Task<T> extends Promise<T> {
 	static override resolve(): Task<void>;
 	/**
 	 * Creates a new resolved Task for the provided value.
-	 * @param value A promise.
+	 * @param value A task or promise.
 	 * @returns A Task whose internal state matches the provided Task or Promise.
 	 */
 	static override resolve<T>(value: T): Task<Awaited<T>>;
 	/**
 	 * Creates a new resolved Task for the provided value.
-	 * @param value A promise.
+	 * @param value A task or promise.
 	 * @returns A Task whose internal state matches the provided Task or Promise.
 	 */
 	static override resolve<T>(
@@ -413,18 +451,19 @@ export class Task<T> extends Promise<T> {
 		return Task.wrap(Promise.resolve(value));
 	}
 
-	controller: TaskController;
+	controller: polyfill.TaskController;
 
 	/**
 	 * A convenience property for getting this Task's priority.
 	 */
-	get priority(): TaskPriority {
+	get priority(): polyfill.TaskPriority {
 		return this.controller.signal.priority;
 	}
+
 	/**
 	 * A convenience property for setting the priority of this Task.
 	 */
-	set priority(priority: TaskPriority) {
+	set priority(priority: polyfill.TaskPriority) {
 		this.controller.setPriority(priority);
 	}
 
@@ -432,7 +471,7 @@ export class Task<T> extends Promise<T> {
 	 * A convenience method for setting this Task's priority, mapped to
 	 * `.controller.setPriority()`.
 	 */
-	setPriority(priority: TaskPriority) {
+	setPriority(priority: polyfill.TaskPriority) {
 		this.controller.setPriority(priority);
 	}
 
@@ -441,11 +480,9 @@ export class Task<T> extends Promise<T> {
 			resolve: (value: T | PromiseLike<T>) => void,
 			reject: (reason?: any) => void,
 		) => void,
-		controller: TaskController =
-			// @ts-expect-error TypeScript does not include these global types yet.
-			new TaskController(
-				Task.defaultControllerOptions,
-			),
+		controller: polyfill.TaskController = new TaskController(
+			Task.#defaultControllerInit,
+		),
 	) {
 		const executorProxy = new Proxy(executor, {
 			apply(
@@ -459,13 +496,11 @@ export class Task<T> extends Promise<T> {
 						_thisArg,
 						[value]: Parameters<typeof resolve>,
 					) {
-						// @ts-expect-error TypeScript does not include these global types yet.
 						return scheduler.postTask(() => originalResolve(value), controller);
 					},
 				});
 				const rejectProxy = new Proxy(reject, {
 					apply(originalReject, _thisArg, [reason]: Parameters<typeof reject>) {
-						// @ts-expect-error TypeScript does not include these global types yet.
 						return scheduler.postTask(() => originalReject(reason), controller);
 					},
 				});
@@ -515,17 +550,10 @@ export class Task<T> extends Promise<T> {
 		);
 	}
 
-	override catch<TResult = never>(
-		onrejected?:
-			| ((reason: any) => TResult | PromiseLike<TResult>)
-			| undefined
-			| null,
-	): Task<T | TResult>;
-
 	/**
-	 * Attaches a callback for only the rejection of the Promise.
-	 * @param onrejected The callback to execute when the Promise is rejected.
-	 * @returns A Promise for the completion of the callback.
+	 * Attaches a callback for only the rejection of the Task.
+	 * @param onrejected The callback to execute when the Task is rejected.
+	 * @returns A Task for the completion of the callback.
 	 */
 	override catch<TResult = never>(
 		onrejected?:
@@ -548,10 +576,10 @@ export class Task<T> extends Promise<T> {
 	}
 
 	/**
-	 * Attaches a callback that is invoked when the Promise is settled
+	 * Attaches a callback that is invoked when the Task is settled
 	 * (fulfilled or rejected). The resolved value cannot be modified
 	 * from the callback.
-	 * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+	 * @param onfinally The callback to execute when the Task is settled (fulfilled or rejected).
 	 * @returns A Task for the completion of the callback.
 	 */
 	override finally(onfinally?: (() => void) | undefined | null): Task<T> {
@@ -566,13 +594,7 @@ export class Task<T> extends Promise<T> {
 export default Task;
 
 export interface TaskWithResolvers<T> extends PromiseWithResolvers<T> {
-	task: Task<T>;
-	/**
-	 * Same as `task`.
-	 *
-	 * Included for type compatibility with the static
-	 * `Promise.withResolvers` method.
-	 */
+	/** The `Task`. */
 	promise: Task<T>;
 	resolve: (value: T | PromiseLike<T>) => void;
 	reject: (reason?: any) => void;

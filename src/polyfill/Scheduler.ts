@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import { HostCallback } from "./host-callback.ts";
-import { IntrusiveTaskQueue as TaskQueue } from "./intrusive-task-queue.ts";
-import {
-	type TaskPriority,
-	TaskPriorityTypes,
-} from "./scheduler-priorities.ts";
-import type { TaskSignal } from "./task-controller.ts";
+import { DoublyLinkedTaskQueue } from "./DoublyLinkedTaskQueue.ts";
+import { HostCallback } from "./HostCallback.ts";
+import type { TaskSignal } from "./TaskController.ts";
+import { TaskPriorityList } from "./TaskPriority.ts";
+import type { TaskPriority } from "./types.d.ts";
 
 export class SchedulerTask {
 	callback: (...args: any[]) => void;
@@ -59,7 +57,7 @@ export class SchedulerTask {
 	/**
 	 * The previous task.
 	 */
-	prev: null | SchedulerTask = null;
+	preceding: null | SchedulerTask = null;
 	/**
 	 * The next task.
 	 */
@@ -107,7 +105,10 @@ export class Scheduler {
 	/**
 	 * Continuation and task queue for each priority, in that order.
 	 */
-	private queues = {} as Record<TaskPriority, [TaskQueue, TaskQueue]>;
+	private queues = new Map<
+		TaskPriority,
+		[DoublyLinkedTaskQueue, DoublyLinkedTaskQueue]
+	>();
 	/*
 	 * We only schedule a single host callback, which can be a setTimeout,
 	 * requestIdleCallback, or postMessage, which will run the oldest, highest
@@ -131,10 +132,18 @@ export class Scheduler {
 	 * since tasks are only run in priority order within a particular scheduler.
 	 */
 	constructor() {
-		for (const priority of TaskPriorityTypes) {
-			this.queues[priority] = [new TaskQueue(), new TaskQueue()];
+		for (const priority of TaskPriorityList) {
+			this.queues.set(priority, [
+				new DoublyLinkedTaskQueue(),
+				new DoublyLinkedTaskQueue(),
+			]);
 		}
 	}
+
+	private static noop() {}
+	private static yieldOptions: SchedulerPostTaskOptions = {
+		priority: "user-blocking", // must be highest priority
+	};
 
 	/**
 	 * Returns a promise that yields to the event loop when awaited, allowing continuation in a new task.
@@ -144,8 +153,8 @@ export class Scheduler {
 	yield(): Promise<void> {
 		// Inheritance is not supported. Use default options instead.
 		return this.postTaskOrContinuation(
-			() => {},
-			{ priority: "user-visible" },
+			Scheduler.noop,
+			Scheduler.yieldOptions,
 			true,
 		);
 	}
@@ -187,7 +196,7 @@ export class Scheduler {
 			// If this is a TaskSignal, make sure the priority is valid.
 			if (
 				options.signal && "priority" in options.signal &&
-				!TaskPriorityTypes.includes(options.signal.priority)
+				!TaskPriorityList.includes(options.signal.priority)
 			) {
 				throw new TypeError(
 					`Invalid task priority: '${options.signal.priority}'`,
@@ -199,7 +208,7 @@ export class Scheduler {
 			// Non-numeric options cannot be null for this API.
 			if (
 				options.priority === null ||
-				!TaskPriorityTypes.includes(options.priority)
+				!TaskPriorityList.includes(options.priority)
 			) {
 				throw new TypeError(`Invalid task priority: '${options.priority}'`);
 			}
@@ -294,8 +303,8 @@ export class Scheduler {
 
 		// Change priority for both continuations and tasks.
 		for (let i = 0; i < 2; i++) {
-			const sourceQueue = this.queues[oldPriority][i];
-			const destinationQueue = this.queues[signal.priority][i];
+			const sourceQueue = this.queues.get(oldPriority)![i];
+			const destinationQueue = this.queues.get(signal.priority)![i];
 
 			destinationQueue.merge(sourceQueue, (task: SchedulerTask) => {
 				return task.options.signal === signal;
@@ -368,7 +377,7 @@ export class Scheduler {
 
 		// The priority should have already been validated before calling this
 		// method, but check the assumption and fail loudly if it doesn't hold.
-		if (!TaskPriorityTypes.includes(priority)) {
+		if (!TaskPriorityList.includes(priority)) {
 			throw new TypeError(`Invalid task priority: ${priority}`);
 		}
 
@@ -383,7 +392,7 @@ export class Scheduler {
 				this.signals.set(signal, signal.priority);
 			}
 		}
-		this.queues[priority][task.isContinuation ? 0 : 1].push(task);
+		this.queues.get(priority)![task.isContinuation ? 0 : 1].push(task);
 	}
 
 	/**
@@ -405,7 +414,7 @@ export class Scheduler {
 
 			// Note: `task` will only be null if the queue is empty, which should not
 			// be the case if we found the priority of the next task to run.
-			task = this.queues[priority][type].takeNextTask();
+			task = this.queues.get(priority)![type].takeNextTask();
 		} while (!task || task.isAborted());
 
 		try {
@@ -420,16 +429,18 @@ export class Scheduler {
 
 	/**
 	 * Get the priority and type of the next task or continuation to run.
-	 * @private
-	 * @return Returns the priority and type
-	 *    of the next continuation or task to run, or null if all queues are
-	 *    empty.
+	 *
+	 * @returns The priority and type of the next continuation or task to run, or null if all queues are empty.
 	 */
-	nextTaskPriority(): { priority: TaskPriority | null; type: number } {
-		for (const priority of TaskPriorityTypes) {
-			for (let type = 0; type < 2; type++) {
-				if (this.queues[priority][type].headTask) return { priority, type };
-			}
+	private nextTaskPriority(): {
+		priority: TaskPriority | null;
+		type: number;
+	} {
+		for (const priority of TaskPriorityList) {
+			const [continuationQueue, taskQueue] = this.queues.get(priority)!;
+			// Continuations have priority over tasks.
+			if (continuationQueue.precedingTask) return { priority, type: 0 };
+			if (taskQueue.precedingTask) return { priority, type: 1 };
 		}
 		return { priority: null, type: 0 };
 	}
@@ -441,7 +452,7 @@ export class Scheduler {
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Scheduler/postTask#options)
  */
 export type SchedulerPostTaskOptions = {
-	/** The immutable {@link TaskPriority} of the task. One of `"user-blocking"`, `"user-visible"`, or `"background"`. If set, this priority is used for the lifetime of the task and priority set on the `signal` is ignored. */
+	/** The immutable {@link TaskPriorityList} of the task. One of `"user-blocking"`, `"user-visible"`, or `"background"`. If set, this priority is used for the lifetime of the task and priority set on the `signal` is ignored. */
 	priority?: TaskPriority;
 	/** An {@link AbortSignal} or {@link TaskSignal} that can be used to abort or re-prioritize the task (from its associated controller). The signal's priority is ignored if `priority` is set. */
 	signal?: AbortSignal | TaskSignal;
