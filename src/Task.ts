@@ -145,7 +145,7 @@ export class Task<T> extends Promise<T> {
 	 * in a new Task with the provided TaskController. This is useful
 	 * for starting a task chain from a synchronous function.
 	 *
-	 * @typeParam C:allback The type of the callback function.
+	 * @typeParam Callback The type of the callback function.
 	 * @param controller A TaskController instance. Used to dynamically control execution priority of subsequent callbacks.
 	 * @param callback The function to execute.
 	 * @param args The arguments to pass to the callback function.
