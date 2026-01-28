@@ -6,7 +6,17 @@ import {
 	assertStrictEquals,
 } from "@std/assert";
 
-Deno.test("Expected globals are defined", () => {
+import type * as polyfill from "./polyfill/types.d.ts";
+// deno-lint-ignore no-var
+declare var scheduler: polyfill.Scheduler;
+// deno-lint-ignore no-var
+declare var TaskController: typeof polyfill.TaskController;
+// deno-lint-ignore no-var
+declare var TaskSignal: typeof polyfill.TaskSignal;
+// deno-lint-ignore no-var
+declare var TaskPriorityChangeEvent: typeof polyfill.TaskPriorityChangeEvent;
+
+Deno.test("Expected globals are defined after importing @apt/task", () => {
 	assertExists(scheduler);
 	assertExists(scheduler.yield);
 	assertExists(TaskController);

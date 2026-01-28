@@ -1,37 +1,38 @@
 import type * as polyfill from "./polyfill/types.d.ts";
 
-if (typeof globalThis.scheduler === "undefined") {
-	console.log("Polyfilling globalThis.scheduler ...");
+if (typeof (globalThis as any).scheduler === "undefined") {
+	console.log("Polyfilling scheduler ...");
 	const polyfill = await import("./polyfill/Scheduler.ts");
-	globalThis.scheduler = new polyfill.Scheduler();
+	(globalThis as any).scheduler = new polyfill.Scheduler();
 }
-if (typeof globalThis.TaskController === "undefined") {
-	console.log("Polyfilling globalThis.TaskController ...");
-	const polyfill = await import("./polyfill/TaskController.ts");
-	globalThis.TaskController = polyfill.TaskController;
-}
-if (typeof globalThis.TaskSignal === "undefined") {
-	console.log("Polyfilling globalThis.TaskSignal ...");
-	const polyfill = await import("./polyfill/TaskController.ts");
-	globalThis.TaskSignal = polyfill.TaskSignal;
-}
-if (typeof globalThis.TaskPriorityChangeEvent === "undefined") {
-	console.log("Polyfilling globalThis.TaskPriorityChangeEvent ...");
-	const polyfill = await import("./polyfill/TaskController.ts");
-	globalThis.TaskPriorityChangeEvent = polyfill.TaskPriorityChangeEvent;
-}
-if (typeof globalThis.scheduler.yield === "undefined") {
-	console.log("Polyfilling globalThis.scheduler.yield ...");
+if (typeof (globalThis as any).scheduler.yield === "undefined") {
+	console.log("Polyfilling scheduler.yield ...");
 	const polyfill = await import("./polyfill/Scheduler.ts");
-	globalThis.scheduler.yield = polyfill.Scheduler.prototype.yield;
+	(globalThis as any).scheduler.yield = polyfill.Scheduler.prototype.yield;
 }
 
-declare global {
-	var scheduler: polyfill.Scheduler;
-	var TaskController: typeof polyfill.TaskController;
-	var TaskPriorityChangeEvent: typeof polyfill.TaskPriorityChangeEvent;
-	var TaskSignal: typeof polyfill.TaskSignal;
+// deno-lint-ignore no-var
+declare var scheduler: polyfill.Scheduler;
+
+if (typeof (globalThis as any).TaskController === "undefined") {
+	console.log("Polyfilling TaskController ...");
+	const polyfill = await import("./polyfill/TaskController.ts");
+	(globalThis as any).TaskController = polyfill.TaskController;
 }
+if (typeof (globalThis as any).TaskSignal === "undefined") {
+	console.log("Polyfilling TaskSignal ...");
+	const polyfill = await import("./polyfill/TaskController.ts");
+	(globalThis as any).TaskSignal = polyfill.TaskSignal;
+}
+if (typeof (globalThis as any).TaskPriorityChangeEvent === "undefined") {
+	console.log("Polyfilling TaskPriorityChangeEvent ...");
+	const polyfill = await import("./polyfill/TaskController.ts");
+	(globalThis as any).TaskPriorityChangeEvent =
+		polyfill.TaskPriorityChangeEvent;
+}
+
+// deno-lint-ignore no-var
+declare var TaskController: typeof polyfill.TaskController;
 
 const validPrioritySet: Set<polyfill.TaskPriority> = new Set([
 	"background",
