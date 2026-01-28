@@ -532,14 +532,24 @@ export class Task<T> extends Promise<T> {
 				super.then(
 					(value: any) => {
 						if (onfulfilled) {
-							resolve(onfulfilled(value));
+							try {
+								const result = onfulfilled(value);
+								resolve(result);
+							} catch (e) {
+								reject(e);
+							}
 						} else {
 							resolve(value);
 						}
 					},
 					(reason) => {
 						if (onrejected) {
-							reject(onrejected(reason));
+							try {
+								const result = onrejected(reason);
+								resolve(result);
+							} catch (e) {
+								reject(e);
+							}
 						} else {
 							reject(reason);
 						}
@@ -562,10 +572,15 @@ export class Task<T> extends Promise<T> {
 			| null,
 	): Task<T | TResult> {
 		return new Task(
-			(_, reject) =>
+			(resolve, reject) =>
 				super.catch((reason) => {
 					if (onrejected) {
-						reject(onrejected(reason));
+						try {
+							const result = onrejected(reason);
+							resolve(result);
+						} catch (e) {
+							reject(e);
+						}
 					} else {
 						reject(reason);
 					}
