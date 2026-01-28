@@ -80,7 +80,7 @@ export interface TaskSignal extends AbortSignal {
 }
 
 // deno-lint-ignore no-var
-export declare var TaskSignal: {
+declare var TaskSignal: {
 	prototype: TaskSignal;
 	new (): TaskSignal;
 	/**
@@ -107,7 +107,7 @@ export interface TaskController extends AbortController {
 }
 
 // deno-lint-ignore no-var
-export declare var TaskController: {
+declare var TaskController: {
 	prototype: TaskController;
 	new (init?: TaskControllerInit): TaskController;
 };
