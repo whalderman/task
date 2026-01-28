@@ -173,6 +173,13 @@ export class Task<T> extends Promise<T> {
 	}
 
 	/**
+	 * A convenience method for `scheduler.yield()`.
+	 *
+	 * The yield() method of the Scheduler interface is used for yielding to the main thread during a task and continuing execution later, with the continuation scheduled as a prioritized task (see the Prioritized Task Scheduling API for more information). This allows long-running work to be broken up so the browser stays responsive.
+	 */
+	static yield = () => scheduler.yield();
+
+	/**
 	 * Executes a callback function and wraps its result or thrown error
 	 * in a new Task and TaskController with the specified
 	 * TaskControllerInit. This is useful for starting a task chain from a synchronous function.
