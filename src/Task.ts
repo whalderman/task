@@ -87,41 +87,29 @@ class PostTaskController extends TaskController implements PostTaskInit {
  *
  * @example
  * ```js
- * let taskController = null;
- * document.querySelector("input").addEventListener(
- *   "input",
- *   (ev) => {
- *     const query = ev.target?.value;
- *     if (!query || query.length < 2) {
- *       return;
- *     }
+ * // import modules in the background
+ * const cm = {
+ * 	autocomplete: Task.wrap(import("@codemirror/autocomplete")),
+ * 	commands: Task.wrap(import("@codemirror/commands")),
+ * 	lang_json: Task.wrap(import("@codemirror/lang-json")),
+ * 	language: Task.wrap(import("@codemirror/language")),
+ * 	lint: Task.wrap(import("@codemirror/lint")),
+ * 	search: Task.wrap(import("@codemirror/search")),
+ * 	state: Task.wrap(import("@codemirror/state")),
+ * 	view: Task.wrap(import("@codemirror/view")),
+ * };
  *
- *     // abort any active request
- *     taskController?.abort();
+ * // Run some analyses sequentially
+ * const analyses = [];
+ * Task.run(async function awaitAnalyses() {
+ * 	for await (const analysis of generator) {
+ * 		analyses.push(analysis);
+ * 		// yield back to the main thread after each analysis.
+ * 		await scheduler.yield();
+ * 	}
+ * });
  *
- *     // Create a new TaskController
- *     taskController = new TaskController();
- *
- *     // Wrap a new fetch request
- *     const task = Task.wrapWithController(
- *       taskController,
- *       fetch(`https://somehost/api/search?q=${query}`, taskController)
- *         .then((response) => response.json())
- *         .then((data) => {
- *           // Use the data
- *           console.log(data);
- *         })
- *         .catch((e) => {
- *           // Check if the error is due to an abort
- *           if (e.name === "AbortError") {
- *             console.log("Fetch request was aborted.");
- *           } else {
- *             console.error("Fetch error:", e);
- *           }
- *         }),
- *     );
- *   },
- * );
+ * // etc.
  * ```
  *
  * The default priority for all Task objects can

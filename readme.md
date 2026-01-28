@@ -52,61 +52,52 @@ Tasks will default to the lowest priority available in the Scheduler API.
 ## How
 
 ```js
-let taskController = null;
-document.querySelector("input").addEventListener(
-	"input",
-	(ev) => {
-		const query = ev.target?.value;
-		if (!query || query.length < 2) {
-			return;
-		}
-		// abort any active request
-		taskController?.abort();
-		// Create a new TaskController
-		taskController = new TaskController();
-		// Wrap a new fetch request
-		const task = Task.wrapWithController(
-			taskController,
-			fetch(`https://somehost/api/search?q=${query}`, taskController)
-				.then((response) => response.json())
-				.then((data) => {
-					// Use the data
-					console.log(data);
-				})
-				.catch((e) => {
-					// Check if the error is due to an abort
-					if (e.name === "AbortError") {
-						console.log("Fetch request was aborted.");
-					} else {
-						console.error("Fetch error:", e);
-					}
-				}),
-		);
-	},
-);
+// import modules in the background
+const cm = {
+	autocomplete: Task.wrap(import("@codemirror/autocomplete")),
+	commands: Task.wrap(import("@codemirror/commands")),
+	lang_json: Task.wrap(import("@codemirror/lang-json")),
+	language: Task.wrap(import("@codemirror/language")),
+	lint: Task.wrap(import("@codemirror/lint")),
+	search: Task.wrap(import("@codemirror/search")),
+	state: Task.wrap(import("@codemirror/state")),
+	view: Task.wrap(import("@codemirror/view")),
+};
+
+// Run some analyses sequentially
+const analyses = [];
+Task.run(async function awaitAnalyses() {
+	for await (const analysis of generator) {
+		analyses.push(analysis);
+		// yield back to the main thread after each analysis.
+		await scheduler.yield();
+	}
+});
+
+// etc.
 ```
 
 The default priority for all Task objects can be set with
-`Task.defaultControllerOptions`:
+`Task.defaultPriority`:
 
 ```js
-// lowest priority, the default for Task objects
-Task.defaultControllerOptions = "background";
-// middle priority, the default for the Scheduler API
-Task.defaultControllerOptions = "user-visible";
-// highest priority
-Task.defaultControllerOptions = "user-blocking";
+// low priority (default)
+Task.defaultPriority = "background";
+// base priority
+Task.defaultPriority = "user-visible";
+// high priority
+Task.defaultPriority = "user-blocking";
 ```
 
 The priority of a Task and its subsequent chained Tasks (`then`, `catch`) can
-also be updated at any point using the `controller` property of an active Task.
+also be updated at any point:
 
 ```js
 const task = Task.wrap(import("some-module.js"));
-console.log(task.controller.signal.priority); // "background"
+console.log(task.priority); // "background"
 // console.log(task.priority); // "background"
-task.controller.setPriority("user-blocking");
+task.setPriority("user-blocking");
 // task.setPriority("user-blocking");
-console.log(task.controller.signal.priority); // "user-blocking"
+console.log(task.priority); // "user-blocking"
 // console.log(task.priority); // "user-blocking"
 ```
