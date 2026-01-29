@@ -25,12 +25,10 @@ export class SchedulerTask {
 	options: SchedulerPostTaskOptions;
 
 	/** The resolve function from the associated Promise. */
-	// @ts-expect-error assigned synchronously in Promise above.
-	resolve: (value: any) => void;
+	resolve!: (value: any) => void;
 
 	/** The reject function from the associated Promise. */
-	// @ts-expect-error assigned synchronously in Promise above.
-	reject: (reason?: any) => void;
+	reject!: (reason?: any) => void;
 
 	/** The pending HostCallback, which is set iff this is a delayed task. */
 	hostCallback: null | HostCallback = null;
