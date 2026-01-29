@@ -11,20 +11,43 @@ const validPrioritySet: Set<polyfill.TaskPriority> = new Set([
 	"user-visible",
 ]);
 
-interface PostTaskInit
+/**
+ * Initialization options for scheduling a prioritized Task.
+ */
+export interface TaskInit
 	extends Omit<polyfill.SchedulerPostTaskOptions, "signal"> {
 }
-class PostTaskController extends TaskController implements PostTaskInit {
+
+/**
+ * A combined **TaskCon**troller and **TaskCon**figuration class.
+ *
+ * Extends the TaskController from the Prioritized Task Scheduling API
+ * with a `delay` property for setting a single-use delay (in
+ * milliseconds) for the next task scheduled with this controller.
+ *
+ * Delays can be updated dynamically (within .then and .catch handlers)
+ * using the `setNextDelay()` method.
+ */
+export class TaskCon extends TaskController implements TaskInit {
 	#delay?: number;
 	/**
-	 * Returns a single-use delay value (in milliseconds) for the next
-	 * task scheduled with this controller. After being accessed, the
-	 * delay is cleared (set to `undefined`).
+	 * **After being accessed, the delay is cleared (set to
+	 * `undefined`).** To access the delay without clearing it, use
+	 * `getNextDelay()`.
+	 *
+	 * @returns a single-use delay value (in milliseconds) for the next task scheduled with this controller.
 	 */
 	get delay(): number | undefined {
 		const value = this.#delay;
 		this.#delay = undefined;
 		return value;
+	}
+
+	/**
+	 * @returns the single-use delay value (in milliseconds) for the next task scheduled with this controller, without clearing it.
+	 */
+	getNextDelay(): number | undefined {
+		return this.#delay;
 	}
 
 	/**
@@ -36,7 +59,7 @@ class PostTaskController extends TaskController implements PostTaskInit {
 		this.#delay = delay;
 	}
 
-	constructor(init?: PostTaskInit) {
+	constructor(init?: TaskInit) {
 		super(init);
 		this.#delay = init?.delay;
 	}
@@ -117,7 +140,7 @@ class PostTaskController extends TaskController implements PostTaskInit {
 export class Task<T> extends Promise<T> {
 	static #defaultInit = {
 		priority: "background" as polyfill.TaskPriority,
-	} satisfies PostTaskInit;
+	} satisfies TaskInit;
 	static get defaultPriority(): polyfill.TaskPriority {
 		return this.#defaultInit.priority;
 	}
@@ -150,7 +173,7 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that resolves with the callback's return value or rejects with its thrown error.
 	 */
 	static runWithOptions<Callback extends (...args: any[]) => any>(
-		options: PostTaskInit,
+		options: TaskInit,
 		callback: Callback,
 		...args: Parameters<Callback>
 	): Task<Awaited<ReturnType<Callback>>> {
@@ -200,7 +223,7 @@ export class Task<T> extends Promise<T> {
 	 * @returns A new Task that mirrors the state of the provided promise.
 	 */
 	static wrapWithOptions<P extends Promise<any>>(
-		options: PostTaskInit,
+		options: TaskInit,
 		promise: P,
 	): Task<Awaited<P>> {
 		return new Task((resolve, reject) => {
@@ -366,7 +389,7 @@ export class Task<T> extends Promise<T> {
 		return Task.wrap(Promise.resolve(value));
 	}
 
-	readonly controller: PostTaskController;
+	readonly controller: TaskCon;
 
 	/**
 	 * A convenience property for getting this Task's priority.
@@ -388,18 +411,16 @@ export class Task<T> extends Promise<T> {
 			resolve: (value: T | PromiseLike<T>) => void,
 			reject: (reason?: any) => void,
 		) => void,
-		options: PostTaskInit | PostTaskController = new PostTaskController({
+		options: TaskInit | TaskCon = new TaskCon({
 			priority: Task.defaultPriority,
 		}),
 	) {
-		const controller = options instanceof PostTaskController
-			? options
-			: Object.assign(
-				new PostTaskController({
-					priority: options.priority ?? Task.defaultPriority,
-				}),
-				options,
-			);
+		const controller = options instanceof TaskCon ? options : Object.assign(
+			new TaskCon({
+				priority: options.priority ?? Task.defaultPriority,
+			}),
+			options,
+		);
 		const executorProxy = new Proxy(executor, {
 			apply(
 				originalExecutor,
