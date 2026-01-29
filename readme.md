@@ -34,11 +34,11 @@ JavaScript runtime having implemented the
 > the link above.
 
 ```js
-// import without polyfill
-import Task from "@apt/task";
+// import polyfill
+import "@apt/task/polyfill";
 
-// import with polyfill;
-import Task from "@apt/task/polyfill";
+// import library
+import Task from "@apt/task";
 ```
 
 ## Why
