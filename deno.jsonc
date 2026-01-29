@@ -1,9 +1,10 @@
 {
 	"name": "@apt/task",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"license": "MIT",
 	"exports": {
-		".": "./src/Task.ts"
+		".": "./src/Task.ts",
+		"./polyfill": "./src/polyfill/mod.ts"
 	},
 	"tasks": {
 		"test": "deno test",
@@ -27,8 +28,8 @@
 	"lint": {
 		"rules": {
 			"exclude": [
-				// we're extending Promise, which often used "any" in
-				// its type signatures.
+				// we're extending Promise, which often
+				// uses "any" in its type signatures.
 				"no-explicit-any"
 			]
 		}
