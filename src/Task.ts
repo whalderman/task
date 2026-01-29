@@ -137,7 +137,7 @@ export class TaskCon extends TaskController implements TaskInit {
  * // console.log(task.priority); // "user-blocking"
  * ```
  */
-export class Task<T> extends Promise<T> {
+export class Task<T = unknown> extends Promise<T> {
 	static #defaultInit = {
 		priority: "background" as polyfill.TaskPriority,
 	} satisfies TaskInit;
