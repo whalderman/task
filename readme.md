@@ -20,18 +20,15 @@ npx jsr add @apt/task
 bunx jsr add @apt/task
 ```
 
-## What
-
-A Task is a Promise. It includes additional utility methods and a TaskController
-for more fine-grained control over its execution. This class relies on your
-JavaScript runtime having implemented the
-[Prioritized Task Scheduling API](https://developer.mozilla.org/docs/Web/API/Prioritized_Task_Scheduling_API).
+## Usage
 
 > [!IMPORTANT]
 > Runtimes without the Prioritized Task Scheduling API will need to import a
 > polyfill. A modified version of a polyfill from the Google Chrome team is
 > included in this package. Supported browsers and runtimes can be reviewed with
 > the link above.
+>
+> The polyfill **must** be imported before the main library.
 
 ```js
 // import polyfill
@@ -40,6 +37,13 @@ import "@apt/task/polyfill";
 // import library
 import Task from "@apt/task";
 ```
+
+## What
+
+A Task is a Promise. It includes additional utility methods and a TaskController
+for more fine-grained control over its execution. This class relies on your
+JavaScript runtime having implemented the
+[Prioritized Task Scheduling API](https://developer.mozilla.org/docs/Web/API/Prioritized_Task_Scheduling_API).
 
 ## Why
 
