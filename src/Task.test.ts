@@ -1,3 +1,5 @@
+import "@apt/task/polyfill";
+
 import Task from "@apt/task";
 import {
 	assertEquals,
