@@ -46,11 +46,11 @@ export class SchedulerTask {
 	promise: Promise<any>;
 
 	private id: number | undefined;
-	get sequenceId() {
+	get sequenceId(): number {
 		if (!this.id) throw new Error("sequenceId has not been set!");
 		return this.id;
 	}
-	set sequenceId(n) {
+	set sequenceId(n: number) {
 		this.id = n;
 	}
 
@@ -95,8 +95,8 @@ export class SchedulerTask {
 		this.reject(this.options.signal!.reason);
 	}
 
-	isAborted() {
-		return this.options.signal && this.options.signal.aborted;
+	isAborted(): boolean {
+		return this.options.signal !== undefined && this.options.signal.aborted;
 	}
 }
 
