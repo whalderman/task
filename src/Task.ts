@@ -25,8 +25,7 @@ export interface TaskInit
  * with a `delay` property for setting a single-use delay (in
  * milliseconds) for the next task scheduled with this controller.
  *
- * Delays can be updated dynamically (within .then and .catch handlers)
- * using the `setNextDelay()` method.
+ * Delays can be updated dynamically (within .then and .catch handlers).
  */
 export class TaskCon extends TaskController implements TaskInit {
 	#delay?: number;
@@ -42,21 +41,20 @@ export class TaskCon extends TaskController implements TaskInit {
 		this.#delay = undefined;
 		return value;
 	}
+	/**
+	 * Sets a single-use delay value (in milliseconds) for the next
+	 * task scheduled with this controller.
+	 * @param millis The delay in milliseconds.
+	 */
+	set delay(millis: number | undefined) {
+		this.#delay = millis;
+	}
 
 	/**
 	 * @returns the single-use delay value (in milliseconds) for the next task scheduled with this controller, without clearing it.
 	 */
 	getNextDelay(): number | undefined {
 		return this.#delay;
-	}
-
-	/**
-	 * Sets a single-use delay value (in milliseconds) for the next
-	 * task scheduled with this controller.
-	 * @param delay A delay in milliseconds.
-	 */
-	setNextDelay(delay: number | undefined) {
-		this.#delay = delay;
 	}
 
 	constructor(init?: TaskInit) {
