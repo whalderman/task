@@ -32,7 +32,7 @@ export class TaskCon extends TaskController implements TaskInit {
 	/**
 	 * **After being accessed, the delay is cleared (set to
 	 * `undefined`).** To access the delay without clearing it, use
-	 * `getNextDelay()`.
+	 * `peekNextDelay()`.
 	 *
 	 * @returns a single-use delay value (in milliseconds) for the next task scheduled with this controller.
 	 */
@@ -53,7 +53,7 @@ export class TaskCon extends TaskController implements TaskInit {
 	/**
 	 * @returns the single-use delay value (in milliseconds) for the next task scheduled with this controller, without clearing it.
 	 */
-	getNextDelay(): number | undefined {
+	peekNextDelay(): number | undefined {
 		return this.#delay;
 	}
 
